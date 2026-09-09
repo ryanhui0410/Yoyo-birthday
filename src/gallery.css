@@ -1,0 +1,87 @@
+/* ================= gallery ================= */
+.corner.tr{display:flex;align-items:center;gap:8px}
+
+.gallery{position:fixed;inset:0;z-index:50;background:var(--bg);
+  overflow-y:auto;overscroll-behavior:contain}
+.gallery::after{content:"";position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 30%, transparent 60%, rgba(8,2,4,.45) 100%)}
+
+.g-head{max-width:1080px;margin:0 auto;padding:64px 28px 24px;
+  display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.g-back{display:inline-flex;align-items:center;gap:8px;background:none;border:none;
+  color:rgba(255,241,220,.55);font-family:Outfit,sans-serif;font-weight:600;font-size:10.5px;
+  letter-spacing:.26em;text-transform:uppercase;cursor:pointer;
+  transition:color .3s;padding:4px 0}
+.g-back:hover{color:var(--ink)}
+.g-back svg{width:14px;height:14px}
+.g-title{font-family:Fraunces,serif;font-style:italic;font-weight:600;
+  font-size:clamp(2.2rem,6vw,3.6rem);color:var(--ink);line-height:1}
+.g-count{font-size:11px;letter-spacing:.3em;text-transform:uppercase;
+  color:rgba(255,241,220,.45);font-weight:300}
+
+.g-wall{max-width:1080px;margin:0 auto;padding:12px 28px 90px;
+  columns:240px;column-gap:24px}
+.g-card{break-inside:avoid;margin:0 0 24px;background:#f8f1e3;
+  padding:12px 12px 44px;border-radius:2px;cursor:pointer;position:relative;
+  transform:rotate(var(--tilt,0deg));
+  box-shadow:0 14px 30px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.25);
+  transition:transform .35s cubic-bezier(.2,1.2,.3,1), box-shadow .35s;
+  animation:gIn .6s cubic-bezier(.2,.9,.3,1) var(--dly,0s) backwards}
+.g-card:hover{transform:rotate(0deg) translateY(-6px) scale(1.02);z-index:2;
+  box-shadow:0 24px 48px rgba(0,0,0,.55)}
+.g-card img{display:block;width:100%;height:auto;border-radius:1px;
+  background:#dcd2c0;min-height:60px}
+.g-card figcaption{position:absolute;left:14px;right:14px;bottom:12px;
+  font-family:Fraunces,serif;font-style:italic;font-size:14px;color:#5a4636;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes gIn{from{opacity:0;transform:translateY(26px) rotate(var(--tilt,0deg)) scale(.9)}
+  to{opacity:1;transform:translateY(0) rotate(var(--tilt,0deg)) scale(1)}}
+
+/* ---------- lightbox ---------- */
+.g-light{position:fixed;inset:0;z-index:60;display:grid;place-items:center;
+  background:rgba(12,4,6,.88);backdrop-filter:blur(6px);
+  animation:gFade .25s ease both}
+@keyframes gFade{from{opacity:0}to{opacity:1}}
+.g-light img{max-width:min(88vw,1000px);max-height:78vh;display:block;
+  border:10px solid #f8f1e3;border-radius:2px;
+  box-shadow:0 30px 80px rgba(0,0,0,.6);cursor:default}
+.g-cap{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;
+  padding:0 80px}
+.g-cap-t{font-family:Fraunces,serif;font-style:italic;font-size:15px;color:var(--ink)}
+.g-cap-n{font-size:10px;letter-spacing:.3em;color:rgba(255,241,220,.5);text-transform:uppercase}
+.g-nav{position:fixed;top:50%;transform:translateY(-50%);width:46px;height:46px;
+  border-radius:50%;border:1px solid rgba(255,241,220,.25);background:rgba(34,17,24,.5);
+  color:var(--ink);cursor:pointer;display:grid;place-items:center;transition:.3s}
+.g-nav:hover{border-color:var(--ink);background:rgba(255,241,220,.12)}
+.g-nav svg{width:16px;height:16px}
+.g-nav.prev{left:20px}
+.g-nav.next{right:20px}
+.g-close{position:fixed;top:20px;right:22px;width:40px;height:40px;border-radius:50%;
+  border:1px solid rgba(255,241,220,.25);background:rgba(34,17,24,.5);color:var(--ink);
+  cursor:pointer;display:grid;place-items:center;transition:.3s}
+.g-close:hover{border-color:var(--ink)}
+.g-close svg{width:14px;height:14px}
+
+/* ---------- empty state ---------- */
+.g-empty{max-width:520px;margin:16vh auto 0;padding:0 28px;text-align:center}
+.g-empty p:first-child{font-family:Fraunces,serif;font-style:italic;
+  font-size:1.4rem;color:rgba(255,241,220,.8)}
+.g-empty-hint{margin-top:12px;font-size:13px;color:rgba(255,241,220,.5);font-weight:300;line-height:1.6}
+.g-empty code{color:var(--butter);font-family:ui-monospace,monospace;font-size:12px}
+/* ---------- HEIC loading / failure states ---------- */
+.g-load{aspect-ratio:4/5;width:100%;border-radius:1px;background:#dcd2c0;
+  display:grid;place-items:center;position:relative}
+.g-load span{width:22px;height:22px;border-radius:50%;
+  border:2px solid rgba(90,70,54,.25);border-top-color:#5a4636;
+  animation:gspin .8s linear infinite}
+@keyframes gspin{to{transform:rotate(360deg)}}
+.g-fail{aspect-ratio:4/5;width:100%;border-radius:1px;background:#e5d9c8;
+  display:grid;place-content:center;gap:4px;text-align:center;padding:12px}
+.g-fail p:first-child{font-family:Fraunces,serif;font-style:italic;
+  font-size:13px;color:#5a4636}
+.g-fail-f{font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(90,70,54,.6)}
+.g-hero{max-width:min(88vw,1000px);max-height:78vh;display:block;
+  border:10px solid #f8f1e3;border-radius:2px;
+  box-shadow:0 30px 80px rgba(0,0,0,.6);cursor:default}

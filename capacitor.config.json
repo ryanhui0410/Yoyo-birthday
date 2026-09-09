@@ -1,0 +1,8 @@
+{
+  "appId": "com.yoyo.birthday",
+  "appName": "Yoyo Birthday",
+  "webDir": "dist",
+  "android": {
+    "adjustMarginsForEdgeToEdge": "force"
+  }
+}

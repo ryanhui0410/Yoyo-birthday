@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# Capacitor / Android build artifacts
+android/app/build/
+android/.gradle/
+android/build/
+android/local.properties
+android/app/src/main/assets/public/
+
+# keys & signing (never commit these!)
+*.keystore
+*.jks
+android/key.properties
+android/app/release-signing.properties
+
+# logs & OS junk
+*.log
+.DS_Store
+Thumbs.db
+
+# environment
+.env
+.env.*

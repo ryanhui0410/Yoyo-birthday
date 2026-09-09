@@ -1,0 +1,224 @@
+:root{
+  --bg:#221118; --bg-party:#2a1521;
+  --ink:#fff1dc; --coral:#ff6b4a; --tangerine:#ffa046;
+  --butter:#ffd678; --rose:#ff7fa3; --mint:#7fe3c4;
+    --stage-w:min(400px,78vw); --stage-h:calc(var(--stage-w)*1.04);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg); color:var(--ink); font-family:'Outfit',sans-serif;
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;overscroll-behavior:none;
+}
+#root,.app{height:100%}
+.app{position:fixed;inset:0;overflow:hidden;transition:background-color 2s ease}
+.app.party{background:var(--bg-party)}
+
+/* ---------- atmosphere ---------- */
+.grain{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.055;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");}
+.vignette{position:fixed;inset:0;z-index:55;pointer-events:none;
+  background:radial-gradient(120% 95% at 50% 42%, transparent 58%, rgba(8,2,4,.5) 100%);}
+.floor{position:fixed;left:50%;bottom:-6vh;transform:translateX(-50%);width:74vw;height:34vh;
+  pointer-events:none;z-index:1;transition:opacity .9s ease;
+  background:radial-gradient(ellipse at 50% 72%, rgba(255,140,60,.30), rgba(255,140,60,0) 66%);}
+#fx{position:fixed;inset:0;z-index:30;pointer-events:none}
+
+/* ---------- corners ---------- */
+.corner{position:fixed;z-index:40;font-size:10.5px;font-weight:600;letter-spacing:.32em;
+  text-transform:uppercase;color:rgba(255,241,220,.5)}
+.corner.tl{top:calc(var(--safe-top) + 24px);left:26px}
+.corner.tr{top:calc(var(--safe-top) + 18px);right:20px}
+.icon-btn{width:36px;height:36px;display:grid;place-items:center;border-radius:50%;
+  border:1px solid rgba(255,241,220,.22);background:rgba(34,17,24,.4);
+  color:rgba(255,241,220,.65);cursor:pointer;transition:.3s}
+.icon-btn:hover{color:var(--ink);border-color:rgba(255,241,220,.5)}
+.icon-btn svg{width:15px;height:15px}
+
+/* ---------- string lights ---------- */
+.lights{position:fixed;top:var(--safe-top);left:0;right:0;height:92px;
+  z-index:1;pointer-events:none;opacity:.8}
+.lights svg{display:block;overflow:visible}
+.wire{fill:none;stroke:rgba(255,241,220,.32);stroke-width:2}
+.bulb{transform-box:fill-box;transform-origin:50% 0%;
+  animation:bsway 3.4s ease-in-out var(--sd,0s) infinite alternate;
+  transition:filter .5s var(--td,0s)}
+.cap{fill:#46322c}
+.glass{fill:rgba(255,241,220,.09);stroke:rgba(255,241,220,.28);stroke-width:1;
+  transition:fill .45s var(--td,0s), stroke .45s var(--td,0s)}
+.lights.on .glass{fill:var(--b);stroke:transparent}
+.lights.on .bulb{filter:drop-shadow(0 0 7px rgba(255,205,110,.65))}
+@keyframes bsway{from{transform:rotate(-2.6deg)}to{transform:rotate(2.6deg)}}
+
+/* ---------- cake & candles ---------- */
+.cake-zone{position:fixed;left:50%;bottom:10vh;z-index:2;
+  transform:translateX(-50%);transform-origin:bottom center;
+  transition:transform 1.4s cubic-bezier(.45,0,.2,1) .45s, bottom 1.4s cubic-bezier(.45,0,.2,1) .45s;
+  animation:cakeIn 1.2s .25s cubic-bezier(.2,.8,.2,1) backwards}
+.cake-zone.small{bottom:2vh;transform:translateX(-50%) scale(.55)}
+@keyframes cakeIn{from{opacity:0;transform:translateX(-50%) translateY(7vh)}
+  to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.cake-stage{width:var(--stage-w);aspect-ratio:320/330;position:relative;container-type:inline-size}
+.cake-svg{position:absolute;left:0;bottom:0;width:100%;display:block}
+
+.candle{position:absolute;width:2.3cqw;transform:scale(var(--s,1)) rotate(var(--r,0deg));
+  transform-origin:50% 100%;z-index:var(--z,2)}
+.c-body{position:absolute;inset:0;border-radius:.6cqw .6cqw .2cqw .2cqw;
+  background:repeating-linear-gradient(115deg,var(--c1) 0 1.1cqw,var(--c2) 1.1cqw 2.2cqw);
+  box-shadow:inset -.7cqw 0 .9cqw rgba(43,10,4,.22)}
+.wick{position:absolute;bottom:100%;left:50%;width:.4cqw;height:1.1cqw;margin-left:-.2cqw;
+  background:#53382c;border-radius:.2cqw}
+.fl-wrap{position:absolute;bottom:calc(100% + .7cqw);left:50%;width:3cqw;height:3cqw;
+  margin-left:-1.5cqw;transform-origin:50% 100%;transition:transform .22s ease}
+.cake-zone.blowing .fl-wrap{transform:rotate(26deg) scale(.95,.7)}
+.fl-ig{width:100%;height:100%;animation:ignite .5s cubic-bezier(.2,1.6,.4,1) var(--ig,0ms) backwards}
+.fl-flick{width:100%;height:100%;transform-origin:50% 100%;
+  animation:flick var(--dur,.22s) linear var(--del,0s) infinite}
+.cake-zone.blowing .fl-flick{animation-duration:calc(var(--dur,.22s)*.45)}
+.flame{position:absolute;inset:0;border-radius:0 50% 50% 50%;transform:rotate(-45deg);
+  background:radial-gradient(circle at 60% 60%, #fff8e0 0 15%, #ffd678 32%, #ff9d2e 58%, #ff7038 82%, rgba(255,100,40,0) 100%);
+  box-shadow:0 0 16px 5px rgba(255,150,60,.25)}
+@keyframes flick{0%,100%{transform:scale(1,1) rotate(-2deg)}
+  25%{transform:scale(.93,1.1) rotate(2.5deg)}
+  50%{transform:scale(1.07,.92) rotate(-1.5deg)}
+  75%{transform:scale(.96,1.06) rotate(4deg)}}
+@keyframes ignite{from{transform:scale(0)}to{transform:scale(1)}}
+.candle.out .fl-wrap{display:none}
+.smoke{position:absolute;bottom:calc(100% + 1cqw);left:50%;width:1.4cqw;height:2cqw;
+  margin-left:-.7cqw;border-radius:50%;background:rgba(214,205,196,.4);filter:blur(1.5px);
+  animation:smoke 1.7s ease-out forwards}
+@keyframes smoke{0%{opacity:0;transform:translate(0,0) scale(.4)}
+  12%{opacity:.8}
+  100%{opacity:0;transform:translate(.9cqw,-8cqw) scale(2.6,1.6)}}
+
+/* ---------- intro hint ---------- */
+.hint{position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(10vh + var(--stage-h)*.66);z-index:5;
+  display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;
+  width:100%;padding:0 20px;pointer-events:none}
+.wish{font-family:Fraunces,serif;font-weight:500;font-size:clamp(1.4rem,4.5vw,2rem);
+  color:var(--ink);animation:fadeUp .9s .25s both}
+.wish em{color:var(--coral)}
+.pill{display:inline-flex;align-items:center;gap:10px;border:1px solid rgba(255,241,220,.25);
+  border-radius:999px;padding:10px 18px;font-size:11px;font-weight:600;letter-spacing:.22em;
+  text-transform:uppercase;color:rgba(255,241,220,.6);background:rgba(34,17,24,.55);
+  animation:fadeUp .9s .4s both, pillPulse 3s 1.5s infinite;
+  transition:border-color .3s,color .3s}
+.pill svg{width:15px;height:15px;flex:none}
+.pill.hold{border-color:var(--butter);color:var(--butter);animation:none}
+.pill.hold svg{animation:wig .3s linear infinite}
+@keyframes wig{from{transform:translateX(-2px)}to{transform:translateX(2px)}}
+@keyframes pillPulse{0%{box-shadow:0 0 0 0 rgba(255,214,120,.22)}
+  70%,100%{box-shadow:0 0 0 12px rgba(255,214,120,0)}}
+.count{font-size:11.5px;letter-spacing:.16em;font-weight:300;min-height:15px;
+  color:rgba(255,241,220,.45);animation:fadeUp .9s .55s both}
+.count.low{color:var(--butter);font-family:Fraunces,serif;font-style:italic;
+  font-size:14.5px;letter-spacing:.04em}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* ---------- dark beat ---------- */
+.whisper{position:fixed;inset:0;display:grid;place-items:center;z-index:10;
+  font-family:Fraunces,serif;font-style:italic;font-size:clamp(1.2rem,3.5vw,1.6rem);
+  color:rgba(255,241,220,.75);letter-spacing:.06em;animation:wh 1.4s ease both}
+@keyframes wh{0%{opacity:0}45%{opacity:1}100%{opacity:1}}
+
+/* ---------- party typography ---------- */
+.party{position:fixed;inset:0;z-index:6;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px;text-align:center;
+  padding:0 24px calc(4vh + var(--stage-h)*.55);pointer-events:none}
+.party button{pointer-events:auto}
+.eyebrow{display:flex;align-items:center;gap:14px;color:var(--butter);
+  font-size:clamp(10px,1.4vw,13px);font-weight:600;letter-spacing:.42em;
+  text-transform:uppercase;animation:ebIn 1s .2s both}
+.eyebrow .rule{width:clamp(24px,6vw,64px);height:1px;background:rgba(255,214,120,.4)}
+.eyebrow svg{width:11px;height:11px;flex:none;animation:starTw 3s 1.4s infinite}
+@keyframes ebIn{from{opacity:0;letter-spacing:.7em}to{opacity:1;letter-spacing:.42em}}
+@keyframes starTw{0%,100%{opacity:1}50%{opacity:.35}}
+.big{font-family:Fraunces,serif;font-style:italic;font-weight:750;
+  font-size:clamp(4.6rem,17vw,10.5rem);line-height:.9;color:var(--ink);letter-spacing:-.02em}
+.big .ch{display:inline-block;
+  animation:chIn .8s cubic-bezier(.16,1.4,.3,1) both;
+  animation-delay:calc(.4s + var(--i)*55ms)}
+.big .bang{color:var(--coral)}
+@keyframes chIn{from{opacity:0;transform:translateY(.55em) rotate(9deg) scale(.55)}
+  to{opacity:1;transform:none}}
+.tag{font-family:Fraunces,serif;font-style:italic;font-weight:400;
+  font-size:clamp(1.05rem,2.6vw,1.45rem);color:rgba(255,241,220,.82);
+  animation:fadeUp2 .9s 1.15s both}
+@keyframes fadeUp2{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.again{margin-top:16px;display:inline-flex;align-items:center;gap:9px;background:none;
+  border:none;border-bottom:1px solid rgba(255,241,220,.25);padding:4px 2px 8px;
+  color:rgba(255,241,220,.55);font-family:Outfit,sans-serif;font-weight:600;font-size:10.5px;
+  letter-spacing:.26em;text-transform:uppercase;cursor:pointer;
+  transition:color .3s,border-color .3s;animation:fadeUp2 .9s 2.6s both}
+.again:hover{color:var(--ink);border-color:rgba(255,241,220,.7)}
+.again svg{width:13px;height:13px}
+.tip{position:fixed;left:22px;bottom:18px;z-index:6;font-size:10.5px;font-weight:300;
+  letter-spacing:.12em;color:rgba(255,241,220,.38);text-transform:uppercase;
+  animation:fadeUp2 1s 4.2s both;pointer-events:none}
+
+/* ---------- rotating badge ---------- */
+.badge{position:fixed;right:6vw;top:16vh;width:clamp(100px,11vw,148px);aspect-ratio:1;
+  transform:rotate(10deg);z-index:3;pointer-events:none;
+  animation:badgeIn .9s 1.5s cubic-bezier(.2,1.6,.4,1) both}
+.badge svg{width:100%;height:100%;animation:spin 18s linear infinite}
+.badge .ring{fill:var(--ink);font-family:Outfit,sans-serif;font-size:10.5px;
+  font-weight:600;letter-spacing:1.5px}
+.badge-num{position:absolute;inset:0;display:grid;place-items:center;
+  font-family:Fraunces,serif;font-style:italic;font-weight:800;
+  font-size:clamp(30px,3.6vw,46px);color:var(--ink)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes badgeIn{from{opacity:0;transform:rotate(-24deg) scale(.3)}
+  to{opacity:1;transform:rotate(10deg) scale(1)}}
+@media (max-width:900px){.badge{display:none}}
+
+/* ---------- balloons ---------- */
+.balloons{position:fixed;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+.balloon{position:fixed;top:0;pointer-events:auto;cursor:pointer;
+  animation:rise linear var(--d) infinite;animation-delay:var(--del);will-change:transform}
+@keyframes rise{from{transform:translateY(105vh)}to{transform:translateY(-135vh)}}
+.b-sway{animation:bs 5.2s ease-in-out var(--sd,0s) infinite alternate}
+@keyframes bs{from{transform:translateX(-12px) rotate(-3.5deg)}
+  to{transform:translateX(12px) rotate(3.5deg)}}
+.balloon svg{display:block}
+
+/* ================== mobile portrait tuning ================== */
+@media (max-width:600px) and (orientation:portrait){
+  /* bigger cake on narrow screens */
+  :root{ --stage-w:min(92vw,440px) }
+
+  /* corner labels: below the string lights (lights occupy the top 92px) */
+  .corner.tl{ top:calc(var(--safe-top) + 102px); left:20px;
+    letter-spacing:.22em; font-size:9.5px }
+  .corner.tr{ top:calc(var(--safe-top) + 96px); right:16px }
+
+  .badge{ display:block; right:auto; left:14px;
+    top:calc(var(--safe-top) + 116px);
+    width:clamp(74px,19vw,104px); transform:rotate(-8deg) }
+  @keyframes badgeIn{ from{opacity:0;transform:rotate(-30deg) scale(.3)}
+    to{opacity:1;transform:rotate(-8deg) scale(1)} }
+  .badge-num{ font-size:clamp(24px,6vw,34px) }
+
+  /* bigger touch targets for thumbs */
+  .icon-btn{ width:42px; height:42px }
+  .icon-btn svg{ width:17px; height:17px }
+
+  /* cake sits a touch lower; the hint tracks it */
+  .cake-zone{ bottom:8vh }
+  .hint{ bottom:calc(8vh + var(--stage-h)*.74); gap:12px }
+  .pill{ padding:12px 20px; font-size:10.5px }
+
+  /* party screen: stop shoving the headline upward on tall screens */
+  .party{ padding:0 20px calc(3vh + var(--stage-h)*.26); gap:14px }
+  .big{ font-size:clamp(3.6rem,24vw,6.5rem) }
+  .tag{ font-size:1rem }
+  .eyebrow{ letter-spacing:.3em }
+
+  .whisper{ font-size:1.15rem; padding:0 30px; text-align:center }
+
+  /* tip text clears the small cake */
+  .tip{ left:50%; transform:translateX(-50%); width:100%; text-align:center;
+    bottom:calc(2vh + var(--stage-h)*.58) }
+}

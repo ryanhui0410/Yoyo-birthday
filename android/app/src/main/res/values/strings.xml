@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Yoyo Birthday</string>
+    <string name="title_activity_main">Yoyo Birthday</string>
+    <string name="package_name">com.yoyo.birthday</string>
+    <string name="custom_url_scheme">com.yoyo.birthday</string>
+</resources>
