@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Gallery, { PhotoIcon } from './Gallery.jsx';
+import { listRemotePhotos } from './photosService.js';
 import './gallery.css';
+import rabbitImg from './rabbit.jpg'; // ✨ ADD THIS LINE
 /* ================= palette & data ================= */
 const CREAM = '#fff1dc';
 const CONF_COLORS = ['#ff6b4a','#ffd678','#ff7fa3','#7fe3c4','#ffa046','#fff1dc'];
@@ -212,6 +214,12 @@ function makeCandles(){
 }
 
 /* ================= icons (inline SVG) ================= */
+const MessageIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+);
 const WindIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -412,7 +420,15 @@ export default function App(){
   const confettiRef=useRef(null);
   const [view, setView] = useState('cake');
   const lit=candles.filter(c=>!c.out).length;
-
+    const [bootRemote, setBootRemote] = useState(null);
+  const [showMsgModal, setShowMsgModal] = useState(false);
+  
+  // ✨ YOUR PERMANENT MESSAGE FOR YOYO — edit the text inside the quotes!
+  const YOYO_MESSAGE = "Happy 23rd Birthday, Yoyo! I hope this year brings you endless joy, laughter, and all the things you've been wishing for. You are so incredibly loved.";
+    /* the moment the app opens, quietly fetch the latest photo list */
+  useEffect(() => {
+    listRemotePhotos().then(setBootRemote);
+  }, []);
   useEffect(()=>{ confettiRef.current=makeConfetti(fxRef.current); },[]);
     useEffect(()=>{
     if(phase==='dark'){
@@ -531,9 +547,9 @@ export default function App(){
     : lit===0 ? '…'
     : lit<=6 ? `almost there — ${lit} to go`
     : `${lit} candles to go`;
-  if (view === 'gallery') {
-  return <Gallery onBack={() => setView('cake')} />;
-}
+    if (view === 'gallery') {
+    return <Gallery onBack={() => setView('cake')} initialRemote={bootRemote} />;
+  }
   return (
     <div className={'app '+phase}>
       <div className="floor" style={{opacity:(lit/23)*.9}}/>
@@ -542,19 +558,34 @@ export default function App(){
       <canvas id="fx" ref={fxRef}/>
 
       <div className="corner tl">Yoyo · Twenty-Three</div>
-      <div className="corner tr">
-      <button className="icon-btn" onClick={() => setView(v => v === 'cake' ? 'gallery' : 'cake')}
-        aria-label="photo gallery" title="photo gallery">
-        <PhotoIcon/>
-      </button>
-      <button className="icon-btn" onClick={toggleMute} aria-label={muted?'unmute':'mute'}>
-        {muted ? <SoundOffIcon/> : <SoundOnIcon/>}
-      </button>
-    </div>
+                  <div className="corner tr">
+                <button 
+          className="icon-btn" 
+          onPointerDown={(e) => e.stopPropagation()} // Blocks the global "blow" listener
+          onClick={(e) => {
+            e.stopPropagation();
+            alert("🎉 Button clicked! If you see this popup, the click works perfectly. The modal will now open.");
+            setShowMsgModal(true);
+          }} 
+          aria-label="a message for you" 
+          title="a message for you"
+          style={{ position: 'relative', zIndex: 99999 }} // Forces button above everything
+        >
+          <MessageIcon />
+        </button>
 
-      {phase==='intro' && (
+        <button className="icon-btn" onClick={() => setView(v => v === 'cake' ? 'gallery' : 'cake')}
+          aria-label="photo gallery" title="photo gallery">
+          <PhotoIcon/>
+        </button>
+        <button className="icon-btn" onClick={toggleMute} aria-label={muted?'unmute':'mute'}>
+          {muted ? <SoundOffIcon/> : <SoundOnIcon/>}
+        </button>
+      </div>
+
+            {phase==='intro' && (
         <div className="hint">
-          <p className="wish">Make a wish, <em>Yoyo</em>.</p>
+          <p className="wish">Make a wish, <em>Yoyo</em> <img src={rabbitImg} alt="Yoyo" className="yoyo-pic" /></p>
           <div className={'pill'+(holding?' hold':'')}>
             <WindIcon/>
             <span>{holding ? 'keep blowing' : 'press & hold to blow'}</span>
@@ -578,18 +609,62 @@ export default function App(){
                 <span key={i} className={'ch'+(ch==='!'?' bang':'')}
                   style={{'--i':i}}>{ch}</span>
               ))}
+              {/* ✨ ADD THE PICTURE HERE */}
+              <img src={rabbitImg} alt="Yoyo" className="yoyo-pic" />
             </h1>
             <p className="tag">Twenty-three looks wonderful on you.</p>
             <button className="again" onClick={replay}>
               <ReplayIcon/> light the candles again
             </button>
           </main>
-          <div className="tip">tap anywhere for confetti — pop the balloons too</div>
         </React.Fragment>
       )}
-
+            {/* ✨ NEW: The Session Box / Modal Overlay */}
       <div className="vignette"/>
       <div className="grain"/>
+            {/* ✨ Message popup — read only, no typing! */}
+            {/* ✨ BULLETPROOF INLINE-STYLED MODAL */}
+      {showMsgModal && (
+        <div 
+          onClick={() => setShowMsgModal(false)} 
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(12, 4, 6, 0.95)', zIndex: 9999999, // Massive z-index to beat vignette/grain
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px', pointerEvents: 'auto'
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            style={{
+              backgroundColor: '#f8f1e3', padding: '40px', borderRadius: '12px',
+              maxWidth: '420px', width: '100%', textAlign: 'center',
+              boxShadow: '0 30px 80px rgba(0,0,0,0.6)', zIndex: 10000000,
+              position: 'relative', color: '#5a4636'
+            }}
+          >
+            <h3 style={{ fontFamily: 'Fraunces, serif', fontStyle: 'italic', fontSize: '26px', marginBottom: '20px', marginTop: 0 }}>
+              A message for you
+            </h3>
+            <div style={{ backgroundColor: '#fffdf8', border: '1px solid #e8dfd0', borderRadius: '8px', padding: '24px', marginBottom: '24px' }}>
+              <p style={{ fontFamily: 'Fraunces, serif', fontStyle: 'italic', fontSize: '18px', lineHeight: '1.7', margin: 0 }}>
+                "{YOYO_MESSAGE}"
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowMsgModal(false)}
+              style={{
+                backgroundColor: '#ff6b4a', color: '#fff1dc', border: 'none',
+                padding: '14px 24px', borderRadius: '999px', fontSize: '12px',
+                fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase',
+                letterSpacing: '1.5px', width: '100%'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

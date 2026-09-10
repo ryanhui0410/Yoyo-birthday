@@ -1,6 +1,6 @@
 # dependencies
 node_modules/
-
+src/gh-token.js
 # build output
 dist/
 

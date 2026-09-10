@@ -22,7 +22,7 @@
 .g-wall{max-width:1080px;margin:0 auto;padding:12px 28px 90px;
   columns:240px;column-gap:24px}
 .g-card{break-inside:avoid;margin:0 0 24px;background:#f8f1e3;
-  padding:12px 12px 44px;border-radius:2px;cursor:pointer;position:relative;
+  padding:12px;border-radius:2px;cursor:pointer;position:relative;
   transform:rotate(var(--tilt,0deg));
   box-shadow:0 14px 30px rgba(0,0,0,.45), 0 2px 6px rgba(0,0,0,.25);
   transition:transform .35s cubic-bezier(.2,1.2,.3,1), box-shadow .35s;
@@ -85,3 +85,259 @@
 .g-hero{max-width:min(88vw,1000px);max-height:78vh;display:block;
   border:10px solid #f8f1e3;border-radius:2px;
   box-shadow:0 30px 80px rgba(0,0,0,.6);cursor:default}
+  /* ---------- upload / token UI ---------- */
+.g-tools{display:flex;align-items:center;gap:12px;margin-top:6px}
+.g-add{display:inline-flex;align-items:center;gap:8px;background:var(--coral);
+  color:var(--ink);border:none;border-radius:999px;padding:11px 18px;
+  font-family:Outfit,sans-serif;font-weight:600;font-size:11px;letter-spacing:.2em;
+  text-transform:uppercase;cursor:pointer;transition:.3s}
+.g-add:hover{filter:brightness(1.08)}
+.g-add:disabled{opacity:.5;cursor:wait}
+.g-add svg{width:13px;height:13px}
+.g-link{background:none;border:none;color:rgba(255,241,220,.5);font-family:Outfit,sans-serif;
+  font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;
+  border-bottom:1px dotted rgba(255,241,220,.4);padding:2px 0;transition:color .3s}
+.g-link:hover{color:var(--ink)}
+.g-token{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.g-token input{flex:1;min-width:220px;background:rgba(34,17,24,.6);border:1px solid rgba(255,241,220,.25);
+  border-radius:8px;padding:10px 12px;color:var(--ink);font-family:Outfit,sans-serif;
+  font-size:13px;outline:none}
+.g-token input:focus{border-color:var(--butter)}
+.g-token button{background:rgba(255,241,220,.12);border:1px solid rgba(255,241,220,.25);
+  color:var(--ink);border-radius:8px;padding:10px 16px;font-size:11px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+.g-status{margin-top:10px;font-size:12px;color:var(--butter);letter-spacing:.1em}
+.g-status.err{color:#ff8a6a}
+/* ---------- "just uploaded" badge ---------- */
+.g-card.is-new::after{
+  content:'new';
+  position:absolute;top:10px;right:10px;z-index:2;
+  background:var(--coral);color:var(--ink);
+  font-family:Outfit,sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;
+  box-shadow:0 2px 8px rgba(0,0,0,.35)}
+/* ---------- refresh button ---------- */
+.g-sync{display:inline-flex;align-items:center;justify-content:center;
+  width:38px;height:38px;border-radius:50%;
+  border:1px solid rgba(255,241,220,.25);background:rgba(34,17,24,.5);
+  color:rgba(255,241,220,.65);cursor:pointer;transition:.3s}
+.g-sync:hover{color:var(--ink);border-color:rgba(255,241,220,.5)}
+.g-sync svg{width:15px;height:15px}
+.g-sync.spin svg{animation:gspin 1s linear infinite}
+/* ✨ Yoyo's Picture Styles */
+/* ✨ Updated Yoyo's Picture Styles */
+/* ✨ Yoyo's Picture Styles */
+/* ✨ Yoyo's Picture Styles */
+.yoyo-pic {
+  /* ✨ We use a CSS variable to control the downward shift! */
+  --y-shift: 0.15em; /* Moves the big picture down slightly */
+  
+  height: 0.8em; 
+  width: auto;
+  vertical-align: middle; 
+  margin-left: 0.2em;
+  border-radius: 50%;
+  border: 0.08em solid #fff1dc; 
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+  
+  animation: picPopIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1.2) forwards;
+  animation-delay: 0.4s; 
+  opacity: 0;
+  
+  /* ✨ Starting position for the animation (no shift yet) */
+  transform: scale(0.5) rotate(-10deg) translateY(0); 
+}
+
+/* ✨ Intro picture: 15% larger than before, NO downward shift */
+.wish .yoyo-pic {
+  --y-shift: 0em; /* Keeps the intro picture perfectly aligned with the text */
+  height: 1.05em; /* Increased by another 15% (from 0.89em to 1.05em) */
+}
+
+/* ✨ Intro picture: 15% larger than base, NO downward shift */
+.wish .yoyo-pic {
+  margin-top: -1vh;
+  height: 1.4em; /* 15% larger than the 0.77em base */
+}
+
+/* ✨ Push the text below "Happy Birthday Yoyo!" lower to fix the overlap */
+.party h1.big {
+  margin-bottom: 2rem; /* Adds generous breathing room below the heading */
+}
+
+.party .tag {
+  margin-top: 0.5rem;
+}
+
+.party .again {
+  margin-top: 1.5rem; /* Pushes the button further down */
+}
+
+@keyframes picPopIn {
+  to {
+    opacity: 1;
+    /* ✨ The magic happens here: it scales up, rotates to 0, AND slides down by var(--y-shift) */
+    transform: scale(1) rotate(0deg) translateY(var(--y-shift)); 
+  }
+}
+/* ✨ Push the entire party text section downwards */
+main.party {
+  margin-top: 30vh; /* Pushes the block down. Increase to 15vh or 20vh if you want it even lower! */
+  position: relative;
+  z-index: 10; /* Ensures the text stays cleanly above the background/cake */
+}
+/* ================= Custom Message Feature ================= */
+
+/* The Button to open the modal */
+.write-msg-btn {
+  margin-top: 28px;
+  background: none;
+  border: 1px dashed rgba(255, 241, 220, 0.4);
+  color: rgba(255, 241, 220, 0.7);
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 12px 24px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.write-msg-btn:hover {
+  background: rgba(255, 241, 220, 0.1);
+  border-color: var(--butter);
+  color: var(--ink);
+}
+
+/* The Saved Note Display */
+.custom-msg-display {
+  margin-top: 35px;
+  max-width: 320px;
+  padding: 24px 28px;
+  background: #f8f1e3; /* Matches the photo polaroids */
+  border-radius: 4px;
+  box-shadow: 0 14px 30px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.25);
+  position: relative;
+  transform: rotate(-2deg);
+  animation: msgPop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1.2) forwards;
+}
+.custom-msg-display p {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 18px;
+  color: #5a4636;
+  line-height: 1.5;
+  margin: 0;
+  text-align: center;
+}
+.edit-msg-btn {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--coral);
+  border: 2px solid #fff1dc;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  transition: transform 0.2s;
+}
+.edit-msg-btn:hover { transform: scale(1.1); }
+
+@keyframes msgPop {
+  from { opacity: 0; transform: rotate(-2deg) translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: rotate(-2deg) translateY(0) scale(1); }
+}
+
+/* The Session Box (Modal Overlay) */
+.msg-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(12, 4, 6, 0.85);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  animation: gFade 0.25s ease both;
+  padding: 20px;
+}
+
+.msg-modal-box {
+  background: #f8f1e3;
+  padding: 32px;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.msg-modal-box h3 {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 24px;
+  color: #5a4636;
+  margin: 0;
+  text-align: center;
+}
+
+.msg-modal-box textarea {
+  width: 100%;
+  min-height: 140px;
+  padding: 16px;
+  border: 1px solid #dcd2c0;
+  border-radius: 4px;
+  background: #fff;
+  font-family: 'Fraunces', serif;
+  font-size: 16px; /* 16px prevents iOS from auto-zooming when typing */
+  color: #5a4636;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.msg-modal-box textarea:focus {
+  border-color: var(--coral);
+}
+
+.msg-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.msg-cancel, .msg-save {
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+  transition: filter 0.2s;
+}
+
+.msg-cancel {
+  background: transparent;
+  color: #5a4636;
+  border: 1px solid #dcd2c0;
+}
+.msg-cancel:hover { filter: brightness(0.95); }
+
+.msg-save {
+  background: var(--coral);
+  color: #fff1dc;
+}
+.msg-save:hover { filter: brightness(1.1); }
