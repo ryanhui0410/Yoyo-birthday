@@ -182,3 +182,19 @@
     border-right-color: var(--border);
   }
 }
+/* ---------- cake template picker ---------- */
+.cake-pick{display:flex;gap:10px;justify-content:center}
+.cake-chip{background:rgba(34,17,24,.55);border:1px solid rgba(255,241,220,.22);
+  border-radius:12px;padding:8px 10px 6px;display:flex;flex-direction:column;
+  align-items:center;gap:5px;cursor:pointer;transition:.25s;min-width:76px;
+  -webkit-tap-highlight-color:transparent}
+.cake-chip:hover{border-color:rgba(255,241,220,.5)}
+.cake-chip.sel{border-color:var(--butter);background:rgba(255,214,120,.12)}
+.chip-art{width:58px;height:auto;display:block;pointer-events:none}
+.cake-chip span{font-size:9.5px;font-weight:600;letter-spacing:.18em;
+  text-transform:uppercase;color:rgba(255,241,220,.6)}
+.cake-chip.sel span{color:var(--butter)}
+
+/* the rabbit photo inline in the text */
+.yoyo-pic{height:.75em;width:auto;border-radius:50%;vertical-align:-.08em;
+  margin-left:.1em;object-fit:cover;box-shadow:0 0 0 2px rgba(255,214,120,.35)}

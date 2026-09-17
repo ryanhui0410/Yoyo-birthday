@@ -36,7 +36,8 @@ body{
   color:rgba(255,241,220,.65);cursor:pointer;transition:.3s}
 .icon-btn:hover{color:var(--ink);border-color:rgba(255,241,220,.5)}
 .icon-btn svg{width:15px;height:15px}
-
+.cake3d{position:absolute;inset:0}
+.cake3d canvas{display:block}
 /* ---------- string lights ---------- */
 .lights{position:fixed;top:var(--safe-top);left:0;right:0;height:92px;
   z-index:1;pointer-events:none;opacity:.8}
