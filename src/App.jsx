@@ -424,7 +424,7 @@ export default function App(){
   const [showMsgModal, setShowMsgModal] = useState(false);
   
   // ✨ YOUR PERMANENT MESSAGE FOR YOYO — edit the text inside the quotes!
-  const YOYO_MESSAGE = "Happy 23rd Birthday, Yoyo! I hope this year brings you endless joy, laughter, and all the things you've been wishing for. You are so incredibly loved.";
+  const YOYO_MESSAGE = "大個女啦，唔再係18/22啦。當初識你嘅時候，由比較斯文文靜嘅性格，到後來開始主動打開話題，好想了解我嘅生活點滴，成個人唔同曬。Well, there are so many highs and lows in our life.唔好因爲受到生活挫折氣餒，";
     /* the moment the app opens, quietly fetch the latest photo list */
   useEffect(() => {
     listRemotePhotos().then(setBootRemote);

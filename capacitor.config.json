@@ -4,5 +4,11 @@
   "webDir": "dist",
   "android": {
     "adjustMarginsForEdgeToEdge": "force"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "backgroundColor": "#221118",
+      "showSpinner": false
+    }
   }
 }
