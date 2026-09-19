@@ -198,3 +198,41 @@
 /* the rabbit photo inline in the text */
 .yoyo-pic{height:.75em;width:auto;border-radius:50%;vertical-align:-.08em;
   margin-left:.1em;object-fit:cover;box-shadow:0 0 0 2px rgba(255,214,120,.35)}
+
+.style-picker{
+  display:flex; justify-content:center; flex-wrap:wrap; gap:4px;
+  width:max-content; max-width:100%;
+  margin:0 auto 16px; padding:6px;
+  background:rgba(255,255,255,.72); backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.9);
+  border-radius:999px;
+  box-shadow:0 10px 30px rgba(240,120,170,.25);
+}
+.style-picker.floating{
+  position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+  margin:0; z-index:12;
+}
+.style-btn{
+  font:inherit; font-size:13px; font-weight:700;
+  display:flex; align-items:center; gap:6px;
+  border:none; cursor:pointer;
+  padding:8px 14px; border-radius:999px;
+  background:transparent; color:#a34a68;
+  transition:background .15s, color .15s, transform .15s;
+}
+.style-btn:hover{ background:rgba(255,255,255,.85); transform:translateY(-1px); }
+.style-btn.active{
+  background:linear-gradient(180deg,#ff8fc0,#f2569c); color:#fff;
+  box-shadow:0 6px 14px rgba(242,86,156,.4);
+}
+.style-emoji{ font-size:15px; }
+.hint, .whisper, .party, .corner, .vignette, .grain { pointer-events:none; }
+.corner button, .party button, .style-picker, .pill { pointer-events:auto; }
+.pill{
+  pointer-events:auto;
+  touch-action:none;              /* no scroll/zoom interference while holding */
+  -webkit-user-select:none; user-select:none;
+  -webkit-touch-callout:none;     /* no long-press menu on iOS */
+  cursor:pointer;
+}
+.cake-ico{ font-size:19px; line-height:1; }

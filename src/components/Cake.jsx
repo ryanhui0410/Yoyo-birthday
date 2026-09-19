@@ -1,11 +1,16 @@
 import React from 'react';
 import Cake3D from '../Cake3D.jsx';
 import PeachCake3D from './PeachCake3D.jsx';
+import StrawberryCake3D from './StrawberryCake3D.jsx';   // ← new
 export const CAKES = [
-  { id:'peach',     label:'Peachy Party' },
-  { id:'chocolate', label:'Chocolate' }   // backup, kept for reference
+  { id:'peach',     label:'Peachy Party', emoji:'🍑' },
+   { id:'strawberry', label:'Strawberry',   emoji:'🍓' },   // ← new
 ];
-
+const CAKE3D = {
+  peach:      PeachCake3D,
+  strawberry: StrawberryCake3D,
+  chocolate:  Cake3D,
+};
 const D1=[[74,11,20],[96,9,30],[118,12,15],[141,10,34],[165,12,22],[190,9,28],[212,12,16],[235,10,26]];
 const D2=[[105,9,14],[122,8,24],[142,10,12],[160,9,28],[180,10,16],[198,8,22]];
 
@@ -23,7 +28,6 @@ const Blueberry = ({x,y}) => (
     <circle r="4.5" fill="#6b7fd7"/><circle r="1.4" fill="#4a5aa8" cy="-2"/>
   </g>
 );
-
 export function CakeArt({ style }){
   const P = {
     chocolate:{ body:'#4a2a18', drip:'#2b1508', top:'#38200f', ring:'#33200f' },
@@ -143,15 +147,14 @@ export const ChocoChipArt = () => (
 );
 
 export default function Cake({ candles, blowing, small, style }){
-  const s = style || 'peach';   // peach is the default
+  const s = style || 'peach';
+  const Scene = CAKE3D[s];
 
   return (
     <div className={'cake-zone'+(small?' small':'')+(blowing?' blowing':'')}>
       <div className="cake-stage">
-        {s === 'chocolate' ? (
-          <Cake3D candles={candles} blowing={blowing}/>      /* backup blueberry */
-        ) : s === 'peach' ? (
-          <PeachCake3D candles={candles} blowing={blowing}/> /* default */
+        {Scene ? (
+          <Scene key={s} candles={candles} blowing={blowing} small={small}/>
         ) : (
           /* SVG fallback for fruit/rabbit, unchanged */
           <React.Fragment>

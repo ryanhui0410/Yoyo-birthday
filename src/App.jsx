@@ -87,51 +87,62 @@ export default function App(){
   },[phase]);
 
   const stopBlow=useCallback(()=>{
-    if(!holdRef.current) return;
-    holdRef.current=false; setHolding(false); AK.whooshStop();
-    cancelAnimationFrame(rafRef.current);
-    if(candlesRef.current.every(c=>c.out)) setPhase('dark');
-  },[]);
+  if(!holdRef.current){ progRef.current=0; return; }   // aborted tap → discard progress
+  holdRef.current=false; setHolding(false); AK.whooshStop();
+  cancelAnimationFrame(rafRef.current);
+  progRef.current=0;                                   // ← don't leak progress between touches
+  if(candlesRef.current.every(c=>c.out)) setPhase('dark');
+},[]);
 
   /* ---------- global input: hold = blow, drag = rotate, tap = confetti ---------- */
   const fnRef=useRef({});
   fnRef.current={startBlow,stopBlow,phase};
   useEffect(()=>{
-    let sx=0, sy=0;                       /* properly declared this time */
-    const down=(e)=>{
-      if(e.target.closest('button, a')) return;
-      sx=e.clientX; sy=e.clientY;
-      const {startBlow,phase}=fnRef.current;
-      if(phase==='intro'){ e.preventDefault(); startBlow(); }
-      else if(phase==='party'){
-        AK.init(); AK.pop();
-        confettiRef.current.burst(e.clientX,e.clientY,26,-Math.PI/2,1.6,6);
-      }
-    };
-    const move=(e)=>{
-      if(holdRef.current && Math.hypot(e.clientX-sx,e.clientY-sy)>25)
-        fnRef.current.stopBlow();
-    };
-    const up=()=>fnRef.current.stopBlow();
-    const kd=(e)=>{ if(e.code==='Space'){ e.preventDefault(); if(!e.repeat) fnRef.current.startBlow(); } };
-    const ku=(e)=>{ if(e.code==='Space') fnRef.current.stopBlow(); };
-    window.addEventListener('pointerdown',down);
-    window.addEventListener('pointermove',move);
-    window.addEventListener('pointerup',up);
-    window.addEventListener('pointercancel',up);
-    window.addEventListener('blur',up);
-    window.addEventListener('keydown',kd);
-    window.addEventListener('keyup',ku);
-    return ()=>{
-      window.removeEventListener('pointerdown',down);
-      window.removeEventListener('pointermove',move);
-      window.removeEventListener('pointerup',up);
-      window.removeEventListener('pointercancel',up);
-      window.removeEventListener('blur',up);
-      window.removeEventListener('keydown',kd);
-      window.removeEventListener('keyup',ku);
-    };
-  },[]);
+  const BLOW_DELAY=180;   // hold still this long before it counts as blowing
+  const DRAG_KILL=14;     // moving this far = rotate gesture, not a blow
+
+  let sx=0, sy=0, intent=0;
+  const clearIntent=()=>{ if(intent){ clearTimeout(intent); intent=0; } };
+
+  const down=(e)=>{
+    if(e.target.closest('button, a, .style-picker, .pill')) return;
+    sx=e.clientX; sy=e.clientY;
+    const {phase}=fnRef.current;
+    if(phase==='intro'){
+      e.preventDefault();
+      clearIntent();
+      intent=setTimeout(()=>fnRef.current.startBlow(), BLOW_DELAY); // armed, not started
+    }else if(phase==='party'){
+      AK.init(); AK.pop();
+      confettiRef.current.burst(e.clientX,e.clientY,26,-Math.PI/2,1.6,6);
+    }
+  };
+  const move=(e)=>{
+    const d=Math.hypot(e.clientX-sx,e.clientY-sy);
+    if(intent && d>DRAG_KILL) clearIntent();                 // it's a drag → rotate only
+    if(holdRef.current && d>DRAG_KILL) fnRef.current.stopBlow(); // drifted mid-blow → cancel
+  };
+  const up=()=>{ clearIntent(); fnRef.current.stopBlow(); };
+  const kd=(e)=>{ if(e.code==='Space'){ e.preventDefault(); if(!e.repeat) fnRef.current.startBlow(); } };
+  const ku=(e)=>{ if(e.code==='Space') fnRef.current.stopBlow(); };
+  window.addEventListener('pointerdown',down);
+  window.addEventListener('pointermove',move);
+  window.addEventListener('pointerup',up);
+  window.addEventListener('pointercancel',up);
+  window.addEventListener('blur',up);
+  window.addEventListener('keydown',kd);
+  window.addEventListener('keyup',ku);
+  return ()=>{
+    clearIntent();
+    window.removeEventListener('pointerdown',down);
+    window.removeEventListener('pointermove',move);
+    window.removeEventListener('pointerup',up);
+    window.removeEventListener('pointercancel',up);
+    window.removeEventListener('blur',up);
+    window.removeEventListener('keydown',kd);
+    window.removeEventListener('keyup',ku);
+  };
+},[]);
 
   /* ---------- actions ---------- */
   const popBalloon=(e,id)=>{
@@ -152,7 +163,10 @@ export default function App(){
     candlesRef.current=fresh; setCandles(fresh);
     setPhase('intro');
   };
-  const chooseCake=(s)=>{ setCakeStyle(s); relight(); };
+  const chooseCake=(s)=>{
+  if(s===cakeStyle) return;      // same flavour → do nothing
+  setCakeStyle(s); relight();    // new cake → fresh candles → back to intro
+};
   const replay=()=>{
     confettiRef.current.clear();
     setPopped([]);
@@ -169,7 +183,6 @@ export default function App(){
   /* ---------- render ---------- */
   if (view==='gallery')
     return <Gallery onBack={()=>setView('cake')} initialRemote={bootRemote}/>;
-
   return (
     <div className={'app '+phase}>
       <div className="floor" style={{opacity:(lit/23)*.9}}/>
@@ -179,32 +192,36 @@ export default function App(){
 
       <div className="corner tl">Yoyo · Twenty-Three</div>
       <div className="corner tr">
-        <button className="icon-btn" onClick={()=>setShowMsgModal(true)}
-          aria-label="a message for you" title="a message for you">
-          <MessageIcon/>
-        </button>
-        <button className="icon-btn"
-          onClick={()=>setView(v=>v==='cake'?'gallery':'cake')}
-          aria-label="photo gallery" title="photo gallery">
-          <PhotoIcon/>
-        </button>
-        <button className="icon-btn" onClick={toggleMute}
-          aria-label={muted?'unmute':'mute'}>
-          {muted ? <SoundOffIcon/> : <SoundOnIcon/>}
-        </button>
-      </div>
+  <button className="icon-btn" onClick={()=>setShowMsgModal(true)} aria-label="a message for you" title="a message for you">
+    <MessageIcon/>
+  </button>
+  <button className="icon-btn"
+    onClick={()=>chooseCake(cakeStyle==='peach' ? 'strawberry' : 'peach')}
+    aria-label={cakeStyle==='peach' ? 'switch to strawberry cake' : 'switch to peach cake'}
+    title={cakeStyle==='peach' ? 'Strawberry cake 🍓' : 'Peach cake 🍑'}>
+    <span className="cake-ico" aria-hidden="true">{cakeStyle==='peach' ? '🍓' : '🍑'}</span>
+  </button>
+  <button className="icon-btn" onClick={()=>setView(v=>v==='cake'?'gallery':'cake')} aria-label="photo gallery" title="photo gallery">
+    <PhotoIcon/>
+  </button>
+  <button className="icon-btn" onClick={toggleMute} aria-label={muted?'unmute':'mute'}>
+    {muted ? <SoundOffIcon/> : <SoundOnIcon/>}
+  </button>
+</div>
 
       {phase==='intro' && (
-        <div className="hint">
-          <p className="wish">Make a wish, <em>Yoyo</em>
-            <img src={rabbitImg} alt="Yoyo" className="yoyo-pic"/></p>
-          <div className={'pill'+(holding?' hold':'')}>
-            <WindIcon/>
-            <span>{holding ? 'keep blowing' : 'press & hold to blow'}</span>
-          </div>
-          <p className={countClass} aria-live="polite">{countText}</p>
-        </div>
-      )}
+  <div className="hint">
+    <p className="wish">Make a wish, <em>Yoyo</em>
+      <img src={rabbitImg} alt="Yoyo" className="yoyo-pic"/></p>
+    <div className={'pill'+(holding?' hold':'')}
+      onPointerDown={(e)=>{ e.preventDefault(); e.stopPropagation(); startBlow(); }}
+      onPointerUp={stopBlow} onPointerLeave={stopBlow} onPointerCancel={stopBlow}>
+      <WindIcon/>
+      <span>{holding ? 'keep blowing' : 'press & hold to blow'}</span>
+    </div>
+    <p className={countClass} aria-live="polite">{countText}</p>
+  </div>
+)}
 
       {phase==='dark' && <div className="whisper">…wish made.</div>}
 
@@ -224,11 +241,11 @@ export default function App(){
             </h1>
             <button className="again" onClick={replay}>
               <ReplayIcon/> light the candles again
-            </button>
+            </button> 
           </main>
         </React.Fragment>
       )}
-
+      
       <MessageModal open={showMsgModal} onClose={()=>setShowMsgModal(false)}/>
       <div className="vignette"/>
       <div className="grain"/>
