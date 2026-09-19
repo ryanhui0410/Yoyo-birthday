@@ -58,7 +58,7 @@ body{
   transform:translateX(-50%);transform-origin:bottom center;
   transition:transform 1.4s cubic-bezier(.45,0,.2,1) .45s, bottom 1.4s cubic-bezier(.45,0,.2,1) .45s;
   animation:cakeIn 1.2s .25s cubic-bezier(.2,.8,.2,1) backwards}
-.cake-zone.small{bottom:2vh;transform:translateX(-50%) scale(.55)}
+.cake-zone.small{bottom:2vh;transform:translateX(-50%) scale(.82)}
 @keyframes cakeIn{from{opacity:0;transform:translateX(-50%) translateY(7vh)}
   to{opacity:1;transform:translateX(-50%) translateY(0)}}
 .cake-stage{width:var(--stage-w);aspect-ratio:320/330;position:relative;container-type:inline-size}
@@ -128,7 +128,7 @@ body{
 /* ---------- party typography ---------- */
 .party{position:fixed;inset:0;z-index:6;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:18px;text-align:center;
-  padding:0 24px calc(4vh + var(--stage-h)*.55);pointer-events:none}
+  padding:0 24px calc(2vh + var(--stage-h)*.82);pointer-events:none}
 .party button{pointer-events:auto}
 .eyebrow{display:flex;align-items:center;gap:14px;color:var(--butter);
   font-size:clamp(10px,1.4vw,13px);font-weight:600;letter-spacing:.42em;
@@ -189,7 +189,8 @@ body{
 @media (max-width:600px) and (orientation:portrait){
   /* bigger cake on narrow screens */
   :root{ --stage-w:min(92vw,440px) }
-
+    .cake-zone.small{bottom:1.5vh;transform:translateX(-50%) scale(.82)}
+  .party{padding:0 20px calc(3vh + var(--stage-h)*.82);gap:14px}
   /* corner labels: below the string lights (lights occupy the top 92px) */
   .corner.tl{ top:calc(var(--safe-top) + 102px); left:20px;
     letter-spacing:.22em; font-size:9.5px }
@@ -220,6 +221,6 @@ body{
   .whisper{ font-size:1.15rem; padding:0 30px; text-align:center }
 
   /* tip text clears the small cake */
-  .tip{ left:50%; transform:translateX(-50%); width:100%; text-align:center;
-    bottom:calc(2vh + var(--stage-h)*.58) }
+    .tip{ left:50%; transform:translateX(-50%); width:100%; text-align:center;
+    bottom:calc(2vh + var(--stage-h)*.78) }
 }

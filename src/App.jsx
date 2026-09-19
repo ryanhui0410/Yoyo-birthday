@@ -234,14 +234,11 @@ export default function App(){
                 <span key={i} className={'ch'+(ch==='!'?' bang':'')}
                   style={{'--i':i}}>{ch}</span>
               ))}
-              <img src={rabbitImg} alt="Yoyo" className="yoyo-pic"/>
             </h1>
-            <p className="tag">Twenty-three looks wonderful on you.</p>
             <button className="again" onClick={replay}>
               <ReplayIcon/> light the candles again
             </button>
           </main>
-          <div className="tip">tap anywhere for confetti — pop the balloons too</div>
         </React.Fragment>
       )}
 
