@@ -1,10 +1,9 @@
 import React from 'react';
 import Cake3D from '../Cake3D.jsx';
-
+import PeachCake3D from './PeachCake3D.jsx';
 export const CAKES = [
-  { id:'chocolate', label:'Chocolate' },
-  { id:'fruit',     label:'Fruit' },
-  { id:'rabbit',    label:'Bunny' }
+  { id:'peach',     label:'Peachy Party' },
+  { id:'chocolate', label:'Chocolate' }   // backup, kept for reference
 ];
 
 const D1=[[74,11,20],[96,9,30],[118,12,15],[141,10,34],[165,12,22],[190,9,28],[212,12,16],[235,10,26]];
@@ -144,15 +143,20 @@ export const ChocoChipArt = () => (
 );
 
 export default function Cake({ candles, blowing, small, style }){
+  const s = style || 'peach';   // peach is the default
+
   return (
     <div className={'cake-zone'+(small?' small':'')+(blowing?' blowing':'')}>
       <div className="cake-stage">
-        {style === 'chocolate' ? (
-          <Cake3D candles={candles} blowing={blowing}/>
+        {s === 'chocolate' ? (
+          <Cake3D candles={candles} blowing={blowing}/>      /* backup blueberry */
+        ) : s === 'peach' ? (
+          <PeachCake3D candles={candles} blowing={blowing}/> /* default */
         ) : (
+          /* SVG fallback for fruit/rabbit, unchanged */
           <React.Fragment>
             <svg className="cake-svg" viewBox="0 0 320 210" aria-hidden="true">
-              <CakeArt style={style}/>
+              <CakeArt style={s}/>
             </svg>
             {candles.map(c=>(
               <div key={c.id} className={'candle'+(c.out?' out':'')}

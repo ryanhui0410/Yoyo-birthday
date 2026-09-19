@@ -2,8 +2,9 @@ import React, { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CREAM } from './theme.js';
+/* ---------- procedural candle assets ---------- */
 
-/* striped candy-cane texture per [c1,c2] pair — mirrors the 2D candles */
+/* striped candy-cane body texture per [c1,c2] pair */
 const texCache = {};
 function candleTexture(c1, c2){
   const key = c1 + '|' + c2;
@@ -22,6 +23,67 @@ function candleTexture(c1, c2){
   return tex;
 }
 
+/* soft radial glow texture for the halo sprite */
+function glowTexture(){
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 128;
+  const g = cv.getContext('2d');
+  const grd = g.createRadialGradient(64, 64, 4, 64, 64, 62);
+  grd.addColorStop(0, 'rgba(255,190,90,.9)');
+  grd.addColorStop(.35, 'rgba(255,150,50,.38)');
+  grd.addColorStop(1, 'rgba(255,120,30,0)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 128, 128);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/* teardrop flame geometry: narrow at the wick, bulge low, taper to a tip */
+function flameGeometry(){
+  const profile = [
+    [0.004, 0.00],
+    [0.045, 0.03],
+    [0.088, 0.14],
+    [0.082, 0.30],
+    [0.050, 0.45],
+    [0.020, 0.56],
+    [0.002, 0.62]
+  ].map(p => new THREE.Vector2(p[0], p[1]));
+  return new THREE.LatheGeometry(profile, 14);
+}
+
+/* fire gradient shader: blue base → white-hot core → orange → fading tip */
+function flameMaterial(){
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    vertexShader: `
+      varying float vY;
+      void main(){
+        vY = uv.y;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      varying float vY;
+      void main(){
+        vec3 cBase = vec3(0.55, 0.65, 0.95);   /* soft warm base at the wick */
+        vec3 cCore = vec3(1.00, 0.90, 0.55);   /* golden core — no longer white-hot */
+        vec3 cMid  = vec3(1.00, 0.65, 0.18);   /* yellow-orange body */
+        vec3 cTip  = vec3(0.95, 0.35, 0.06);   /* ember-orange tip */
+        vec3 col = mix(cBase, cCore, smoothstep(0.00, 0.28, vY));
+        col = mix(col, cMid, smoothstep(0.34, 0.68, vY));
+        col = mix(col, cTip, smoothstep(0.72, 0.96, vY));
+        /* opaque low, dissolving toward the tip */
+        float alpha = smoothstep(1.0, 0.82, vY) * smoothstep(0.0, 0.10, vY);
+        alpha = mix(alpha, 1.0, smoothstep(0.10, 0.55, vY));
+        gl_FragColor = vec4(col * 1.05, alpha);
+      }`
+  });
+}
+
 export default function Cake3D({ candles, blowing }){
   const mountRef = useRef(null);
   const engineRef = useRef(null);
@@ -32,25 +94,25 @@ export default function Cake3D({ candles, blowing }){
 
     const camera = new THREE.PerspectiveCamera(
       45, mount.clientWidth / Math.max(1, mount.clientHeight), .1, 1000);
-    camera.position.set(0, 9.5, 14.5);
+    camera.position.set(0, 10, 16);   
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.6;
     mount.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true; controls.dampingFactor = .05;
     controls.maxPolarAngle = Math.PI / 2 + .02;
-    controls.minDistance = 5; controls.maxDistance = 22;
+    controls.minDistance = 7; controls.maxDistance = 24;
     controls.target.set(0, 1.8, 0);
     controls.autoRotate = true; controls.autoRotateSpeed = 1.2;
 
-    /* ---- lighting (decay:0 restores the r128-template look on modern three) ---- */
+    /* ---- lighting ---- */
     scene.add(new THREE.AmbientLight(0xfff0e6, .9));
     const key = new THREE.DirectionalLight(0xfff5ea, 1.6);
     key.position.set(7, 12, 7);
@@ -58,21 +120,19 @@ export default function Cake3D({ candles, blowing }){
     key.shadow.mapSize.set(2048, 2048);
     key.shadow.bias = -0.0003;
     scene.add(key);
-    const warm = new THREE.PointLight(0xffaa55, .8, 25, 0);   /* decay 0 */
+    const warm = new THREE.PointLight(0xffaa55, .8, 25, 0);
     warm.position.set(-8, 5, -6); scene.add(warm);
     const cool = new THREE.DirectionalLight(0x7090ff, .5);
     cool.position.set(-5, 8, -8); scene.add(cool);
-    const glow = new THREE.PointLight(0xffa050, 1.2, 16, 0);  /* decay 0 */
+    const glow = new THREE.PointLight(0xffa050, 1.2, 16, 0);
     glow.position.set(0, 4, 0); scene.add(glow);
 
-    /* ---- materials: exact template colors ---- */
+    /* ---- materials ---- */
     const ganache = new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: .35, metalness: .05 });
     const cream   = new THREE.MeshStandardMaterial({ color: 0xfffae6, roughness: .3 });
     const plateM  = new THREE.MeshStandardMaterial({ color: 0xf5f5f7, roughness: .1, metalness: .05 });
     const calyx   = new THREE.MeshStandardMaterial({ color: 0x1a1d2e, roughness: .9 });
     const wickM   = new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: .8 });
-    const flameM  = new THREE.MeshStandardMaterial({
-      color: 0xffb347, emissive: 0xff8c1a, emissiveIntensity: 1.8, roughness: .4 });
 
     const cake = new THREE.Group();
 
@@ -103,7 +163,7 @@ export default function Cake3D({ candles, blowing }){
     glaze.rotation.x = Math.PI / 2; glaze.position.y = TOP_Y - .05;
     glaze.castShadow = true; cake.add(glaze);
 
-    /* ---- blueberries: the template's material & geometry, untouched ---- */
+    /* ---- blueberries ---- */
     function berryMaterial(){
       const m = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color(0x5a67d6),
@@ -177,9 +237,11 @@ export default function Cake3D({ candles, blowing }){
       cake.add(sp);
     }
 
-    /* ---- 23 candles inside the berry ring ----
-       bodies default to CREAM from theme.js; syncCandles applies each
-       candle's [c1,c2] pair as a striped texture (same palette as 2D) */
+    /* ---- 23 candles with realistic flames ---- */
+    const flameGeo = flameGeometry();
+    const flameMat = flameMaterial();
+    const glowTex = glowTexture();
+
     const rows = [{ n: 9, r: .95, h: 1.0 }, { n: 14, r: 1.85, h: 1.25 }];
     const flames = [], bodies = [];
     rows.forEach((row, ri) => {
@@ -187,19 +249,39 @@ export default function Cake3D({ candles, blowing }){
         const a = (i / row.n) * Math.PI * 2 + (ri ? Math.PI / 14 : .3);
         const x = Math.cos(a) * row.r, z = Math.sin(a) * row.r;
         const h = row.h + (i % 3) * .07;
-        const bm = new THREE.MeshStandardMaterial({
-          color: CREAM, roughness: .6 });           /* ← CREAM default */
+
+        /* striped body */
+        const bm = new THREE.MeshStandardMaterial({ color: CREAM, roughness: .6 });
         const body = new THREE.Mesh(new THREE.CylinderGeometry(.07, .07, h, 12), bm);
         body.position.set(x, TOP_Y + h / 2, z);
         cake.add(body); bodies.push(body);
-        const wick = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, .09, 6), wickM);
-        wick.position.set(x, TOP_Y + h + .04, z); cake.add(wick);
+
+        /* wick */
+        const wick = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, .1, 6), wickM);
+        wick.position.set(x, TOP_Y + h + .05, z); cake.add(wick);
+
+        /* flame = teardrop shader mesh + additive glow halo */
         const fg = new THREE.Group();
-        fg.position.set(x, TOP_Y + h + .1, z);
-        const fl = new THREE.Mesh(new THREE.SphereGeometry(.13, 10, 10), flameM);
-        fl.scale.set(1, 1.7, 1); fg.add(fl); cake.add(fg);
+        fg.position.set(x, TOP_Y + h + .06, z);
+        const core = new THREE.Mesh(flameGeo, flameMat);
+        core.scale.setScalar(.8);
+        fg.add(core);
+        const glowMat = new THREE.SpriteMaterial({
+          map: glowTex,
+          color: 0xffa04a,
+          transparent: true,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          opacity: .4
+        });
+        const halo = new THREE.Sprite(glowMat);
+        halo.scale.set(.38, .8, 1);
+        halo.position.y = .18;
+        fg.add(halo);
+        cake.add(fg);
+
         const rr = Math.max(.4, Math.hypot(x, z));
-        flames.push({ group: fg, mesh: fl, phase: Math.random() * 6.28,
+        flames.push({ group: fg, core, halo, phase: Math.random() * 6.28,
           dirX: x / rr, dirZ: z / rr });
       }
     });
@@ -218,7 +300,7 @@ export default function Cake3D({ candles, blowing }){
             const bm = bodies[i].material;
             if (c.c1 && c.c2){
               bm.map = candleTexture(c.c1, c.c2);
-              bm.color.set(0xffffff);               /* map supplies the color */
+              bm.color.set(0xffffff);
               bm.needsUpdate = true;
             } else {
               bm.color.set(CREAM);
@@ -231,6 +313,7 @@ export default function Cake3D({ candles, blowing }){
     };
     engineRef.current = engine;
 
+    /* ---- animation: rich multi-frequency flicker ---- */
     const clock = new THREE.Clock();
     let raf;
     const loop = () => {
@@ -238,8 +321,16 @@ export default function Cake3D({ candles, blowing }){
       const t = clock.getElapsedTime();
       flames.forEach(f => {
         if (!f.group.visible) return;
-        const s = .85 + .25 * Math.sin(t * 10 + f.phase);
-        f.mesh.scale.set(1, s * 1.7, 1);
+        /* three overlapping sine bands = organic flicker, unique per flame */
+        const n = Math.sin(t * 9  + f.phase)     * .5
+                + Math.sin(t * 23 + f.phase * 2) * .3
+                + Math.sin(t * 5.7 + f.phase * 3) * .2;
+        f.core.scale.set(.8 + .06 * n, .8 * (1 + .22 * n), .8 + .06 * n);
+        f.core.position.x = .015 * n;
+        f.core.rotation.z = .06 * Math.sin(t * 7 + f.phase);
+        f.halo.material.opacity = .32 + .14 * n;
+        f.halo.scale.set(.38 + .04 * n, .55 + .1 * n, 1);
+        /* lean outward while blowing */
         const k = engine.blowFlag ? .55 : 0;
         f.group.rotation.x = THREE.MathUtils.lerp(f.group.rotation.x, k * f.dirZ, .2);
         f.group.rotation.z = THREE.MathUtils.lerp(f.group.rotation.z, -k * f.dirX, .2);

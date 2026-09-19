@@ -27,7 +27,7 @@ export default function App(){
   const fxRef=useRef(null);
   const confettiRef=useRef(null);
   const [view,setView]=useState('cake');
-  const [cakeStyle,setCakeStyle]=useState('chocolate');
+  const [cakeStyle,setCakeStyle]=useState('peach');
   const [bootRemote,setBootRemote]=useState(null);
   const [showMsgModal,setShowMsgModal]=useState(false);
 
@@ -196,19 +196,6 @@ export default function App(){
 
       {phase==='intro' && (
         <div className="hint">
-          <div className="cake-pick" role="tablist" aria-label="choose your cake">
-            {CAKES.map(c=>(
-              <button key={c.id}
-                className={'cake-chip'+(cakeStyle===c.id?' sel':'')}
-                onClick={()=>chooseCake(c.id)}
-                role="tab" aria-selected={cakeStyle===c.id}>
-                <svg viewBox="0 0 320 210" className="chip-art" aria-hidden="true">
-                  {c.id==='chocolate' ? <ChocoChipArt/> : <CakeArt style={c.id}/>}
-                </svg>
-                <span>{c.label}</span>
-              </button>
-            ))}
-          </div>
           <p className="wish">Make a wish, <em>Yoyo</em>
             <img src={rabbitImg} alt="Yoyo" className="yoyo-pic"/></p>
           <div className={'pill'+(holding?' hold':'')}>

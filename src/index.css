@@ -2,7 +2,7 @@
   --bg:#221118; --bg-party:#2a1521;
   --ink:#fff1dc; --coral:#ff6b4a; --tangerine:#ffa046;
   --butter:#ffd678; --rose:#ff7fa3; --mint:#7fe3c4;
-    --stage-w:min(400px,78vw); --stage-h:calc(var(--stage-w)*1.04);
+    --stage-w:min(560px,94vw); --stage-h:calc(var(--stage-w)*0.94);
   --safe-top: env(safe-area-inset-top, 0px);
 }
 *{margin:0;padding:0;box-sizing:border-box}
@@ -19,7 +19,7 @@ body{
 /* ---------- atmosphere ---------- */
 .grain{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.055;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");}
-.vignette{position:fixed;inset:0;z-index:55;pointer-events:none;
+.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
   background:radial-gradient(120% 95% at 50% 42%, transparent 58%, rgba(8,2,4,.5) 100%);}
 .floor{position:fixed;left:50%;bottom:-6vh;transform:translateX(-50%);width:74vw;height:34vh;
   pointer-events:none;z-index:1;transition:opacity .9s ease;
@@ -54,11 +54,11 @@ body{
 @keyframes bsway{from{transform:rotate(-2.6deg)}to{transform:rotate(2.6deg)}}
 
 /* ---------- cake & candles ---------- */
-.cake-zone{position:fixed;left:50%;bottom:10vh;z-index:2;
+.cake-zone{position:fixed;left:50%;bottom:24vh;z-index:2;
   transform:translateX(-50%);transform-origin:bottom center;
   transition:transform 1.4s cubic-bezier(.45,0,.2,1) .45s, bottom 1.4s cubic-bezier(.45,0,.2,1) .45s;
   animation:cakeIn 1.2s .25s cubic-bezier(.2,.8,.2,1) backwards}
-.cake-zone.small{bottom:2vh;transform:translateX(-50%) scale(.82)}
+.cake-zone.small{bottom:16vh;transform:translateX(-50%) scale(.82)}
 @keyframes cakeIn{from{opacity:0;transform:translateX(-50%) translateY(7vh)}
   to{opacity:1;transform:translateX(-50%) translateY(0)}}
 .cake-stage{width:var(--stage-w);aspect-ratio:320/330;position:relative;container-type:inline-size}
@@ -96,7 +96,7 @@ body{
 
 /* ---------- intro hint ---------- */
 .hint{position:fixed;left:50%;transform:translateX(-50%);
-  bottom:calc(10vh + var(--stage-h)*.66);z-index:5;
+  top:calc(var(--safe-top) + 15vh);z-index:5;
   display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;
   width:100%;padding:0 20px;pointer-events:none}
 .wish{font-family:Fraunces,serif;font-weight:500;font-size:clamp(1.4rem,4.5vw,2rem);
@@ -188,7 +188,7 @@ body{
 /* ================== mobile portrait tuning ================== */
 @media (max-width:600px) and (orientation:portrait){
   /* bigger cake on narrow screens */
-  :root{ --stage-w:min(92vw,440px) }
+  :root{ --stage-w:min(96vw,480px) }
     .cake-zone.small{bottom:1.5vh;transform:translateX(-50%) scale(.82)}
   .party{padding:0 20px calc(3vh + var(--stage-h)*.82);gap:14px}
   /* corner labels: below the string lights (lights occupy the top 92px) */
@@ -208,8 +208,9 @@ body{
   .icon-btn svg{ width:17px; height:17px }
 
   /* cake sits a touch lower; the hint tracks it */
-  .cake-zone{ bottom:8vh }
-  .hint{ bottom:calc(8vh + var(--stage-h)*.74); gap:12px }
+  /* cake raised on mobile; hint pinned to the top */
+  .cake-zone{ bottom:15vh }
+  .hint{ top:calc(var(--safe-top) + 20vh); gap:12px }
   .pill{ padding:12px 20px; font-size:10.5px }
 
   /* party screen: stop shoving the headline upward on tall screens */
