@@ -189,8 +189,6 @@ export default function App(){
       <Lights on={phase==='party'}/>
       <Cake candles={candles} blowing={holding} small={phase==='party'} style={cakeStyle}/>
       <canvas id="fx" ref={fxRef}/>
-
-      <div className="corner tl">Yoyo · Twenty-Three</div>
       <div className="corner tr">
   <button className="icon-btn" onClick={()=>setShowMsgModal(true)} aria-label="a message for you" title="a message for you">
     <MessageIcon/>

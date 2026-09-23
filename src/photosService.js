@@ -68,7 +68,14 @@ export async function fetchPhotoBlob(item){
 
   return blob;
 }
-
+/* full-resolution fetch for saving/sharing (no display compression) */
+export async function fetchPhotoOriginal(item){
+  const url = item.download_url ||
+    `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${item.path}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to download image');
+  return await res.blob();
+}
 /* Helper: Compress an image blob until it is under 1.5MB */
 async function compressForDisplay(blob) {
   let img;
