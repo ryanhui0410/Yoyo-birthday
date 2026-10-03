@@ -23,7 +23,28 @@ function radialTexture(inner, outer){
   g.fillStyle=grd; g.fillRect(0,0,128,128);
   return new THREE.CanvasTexture(c);
 }
+// --- ADD THIS BLOCK (before the component) ---
 
+export function computeCandleSlots(){
+  const rndC = mulberry32(99);
+  const slots = [];
+  const ring1 = 5, ring2 = 7;
+  const r1 = 0.62, r2 = 0.92;
+  for (let i = 0; i < ring1; i++){
+    const a = (i / ring1) * Math.PI * 2 + 0.35;
+    if (Math.abs(Math.cos(a)) * r1 < 0.62 &&
+        Math.sin(a) * r1 > -0.30 && Math.sin(a) * r1 < 0.20) continue;
+    slots.push({ x: Math.cos(a) * r1, z: Math.sin(a) * r1,
+                 h: 1.0 + rndC() * 0.25, phase: rndC() * 10 });
+  }
+  for (let i = 0; i < ring2; i++){
+    const a = (i / ring2) * Math.PI * 2 + 0.9;
+    slots.push({ x: Math.cos(a) * r2, z: Math.sin(a) * r2,
+                 h: 0.82 + rndC() * 0.3, phase: rndC() * 10 });
+  }
+  return slots;
+}
+export const CANDLE_COUNT = computeCandleSlots().length;   // 11
 function cakeTexture(){
   const rnd = mulberry32(7);
   const c=document.createElement('canvas'); c.width=1024; c.height=512;
@@ -314,25 +335,7 @@ export default function PeachCake3D({ candles, blowing }){
     const glowTex = radialTexture('rgba(255,190,110,0.85)','rgba(255,190,110,0)');
     const smokeTex= radialTexture('rgba(225,220,225,0.5)','rgba(225,220,225,0)');
 
-        const slots = [];
-    const rndC = mulberry32(99);
-    // Rings pushed outward so candles clear the heart topper
-    // (heart spans ~|x| < 0.5 around the top center)
-    const ring1 = 5, ring2 = 7;
-    const r1 = 0.62, r2 = 0.92;
-    for (let i = 0; i < ring1; i++){
-      const a = (i / ring1) * Math.PI * 2 + 0.35;
-      // skip any inner-ring slot that would still land in the heart zone
-      if (Math.abs(Math.cos(a)) * r1 < 0.62 &&
-          Math.sin(a) * r1 > -0.30 && Math.sin(a) * r1 < 0.20) continue;
-      slots.push({ x: Math.cos(a) * r1, z: Math.sin(a) * r1,
-                   h: 1.0 + rndC() * 0.25, phase: rndC() * 10 });
-    }
-    for (let i = 0; i < ring2; i++){
-      const a = (i / ring2) * Math.PI * 2 + 0.9;
-      slots.push({ x: Math.cos(a) * r2, z: Math.sin(a) * r2,
-                   h: 0.82 + rndC() * 0.3, phase: rndC() * 10 });
-    }
+    const slots = computeCandleSlots();
 
     const flames = [], bodies = [];
     function addCandle(slot){

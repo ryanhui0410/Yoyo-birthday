@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { CREAM } from './theme.js';
 /* ---------- procedural candle assets ---------- */
-
+export const CANDLE_COUNT = 23;   // 9 inner + 14 outer rows
 /* striped candy-cane body texture per [c1,c2] pair */
 const texCache = {};
 function candleTexture(c1, c2){

@@ -12,11 +12,13 @@ import Balloons from './components/Balloons.jsx';
 import Badge from './components/Badge.jsx';
 import MessageModal from './components/MessageModal.jsx';
 import './gallery.css';
-
+import { CANDLE_COUNT as PEACH_COUNT } from './components/PeachCake3D.jsx';
+import { CANDLE_COUNT as STRAWBERRY_COUNT } from './components/StrawberryCake3D.jsx';
 export default function App(){
   /* ---------- state ---------- */
+  const countFor = (style) => (style === 'peach' ? PEACH_COUNT : STRAWBERRY_COUNT);
   const [phase,setPhase]=useState('intro');
-  const [candles,setCandles]=useState(()=>makeCandles());
+  const [candles,setCandles]=useState(()=>makeCandles(countFor('peach')));
   const candlesRef=useRef(candles);
   const [holding,setHolding]=useState(false);
   const holdRef=useRef(false);
@@ -30,9 +32,6 @@ export default function App(){
   const [cakeStyle,setCakeStyle]=useState('peach');
   const [bootRemote,setBootRemote]=useState(null);
   const [showMsgModal,setShowMsgModal]=useState(false);
-
-  const lit=candles.filter(c=>!c.out).length;
-
   /* ---------- effects ---------- */
   useEffect(() => { listRemotePhotos().then(setBootRemote); }, []);
   useEffect(() => { confettiRef.current = makeConfetti(fxRef.current); }, []);
@@ -155,37 +154,38 @@ export default function App(){
     const m=!muted; setMuted(m);
     AK.init(); AK.setMuted(m);
   };
-  const relight=()=>{
+  const relight=(styleOverride)=>{
+    const style = styleOverride ?? cakeStyle;
     progRef.current=0;
     holdRef.current=false; setHolding(false);
     cancelAnimationFrame(rafRef.current);
-    const fresh=makeCandles();
+    const fresh=makeCandles(countFor(style));
     candlesRef.current=fresh; setCandles(fresh);
     setPhase('intro');
   };
   const chooseCake=(s)=>{
-  if(s===cakeStyle) return;      // same flavour → do nothing
-  setCakeStyle(s); relight();    // new cake → fresh candles → back to intro
+  if(s===cakeStyle) return;
+  setCakeStyle(s); relight(s);
 };
   const replay=()=>{
     confettiRef.current.clear();
     setPopped([]);
     relight();
   };
-
-  /* ---------- derived ---------- */
-  const countClass='count'+(lit<=6&&lit>0?' low':'');
-  const countText = lit===23 ? 'twenty-three candles to go'
-    : lit===0 ? '…'
-    : lit<=6 ? `almost there — ${lit} to go`
-    : `${lit} candles to go`;
-
+    /* ---------- derived ---------- */
+  const total = candles.length;
+  const lit   = candles.filter(c=>!c.out).length;
+  const countClass = 'count' + (lit <= 6 && lit > 0 ? ' low' : '');
+  const countText  = lit === total ? `${total} candles to go`
+    : lit === 0      ? '…'
+    : lit <= 6       ? `almost there — ${lit} to go`
+    :                  `${lit} candles to go`;
   /* ---------- render ---------- */
   if (view==='gallery')
     return <Gallery onBack={()=>setView('cake')} initialRemote={bootRemote}/>;
   return (
     <div className={'app '+phase}>
-      <div className="floor" style={{opacity:(lit/23)*.9}}/>
+      <div className="floor" style={{opacity:(lit/total)*.9}}/>
       <Lights on={phase==='party'}/>
       <Cake candles={candles} blowing={holding} small={phase==='party'} style={cakeStyle}/>
       <canvas id="fx" ref={fxRef}/>
