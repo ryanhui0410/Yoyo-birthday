@@ -376,7 +376,7 @@ export default function MessageModal({ open, onClose }){
           <div style={{
             position:'absolute', inset:0, borderRadius:'2px 13px 13px 2px',
             overflow:'hidden', zIndex:1,
-            boxShadow:`inset 3px 0 ${12+curlAmt*8}px rgba(0,0,0,${.1+curlAmt*.08})`,
+            boxShadow:'inset 3px 0 12px rgba(0,0,0,.1)',
           }}>
             <MemoPage message={underMsg} pageNum={underNum} curlAmount={curlAmt * 0.3}/>
           </div>
@@ -400,17 +400,6 @@ export default function MessageModal({ open, onClose }){
             }}>
               <MemoPage message={frontMsg} pageNum={frontNum} curlAmount={curlAmt}/>
               {/* curved edge shadow */}
-              {curlAmt > 0.03 && (
-                <div style={{
-                  position:'absolute', inset:0, pointerEvents:'none', zIndex:7,
-                  background:`linear-gradient(90deg,
-                    transparent 60%,
-                    rgba(0,0,0,${curlAmt*.06}) 80%,
-                    rgba(0,0,0,${curlAmt*.16}) 95%,
-                    rgba(0,0,0,${curlAmt*.22}) 100%
-                  )`,
-                }}/>
-              )}
             </div>
 
             {/* back face */}
@@ -422,16 +411,6 @@ export default function MessageModal({ open, onClose }){
               overflow:'hidden',
             }}>
               <PageBack curlAmount={curlAmt}/>
-              {curlAmt > 0.03 && (
-                <div style={{
-                  position:'absolute', inset:0, pointerEvents:'none', zIndex:7,
-                  background:`linear-gradient(270deg,
-                    transparent 60%,
-                    rgba(0,0,0,${curlAmt*.05}) 80%,
-                    rgba(0,0,0,${curlAmt*.12}) 95%
-                  )`,
-                }}/>
-              )}
             </div>
           </div>
 
