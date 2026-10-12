@@ -1,20 +1,27 @@
 package com.yoyo.birthday;
 
+import android.Manifest;
 import android.content.ContentValues;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
 import android.util.Base64;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 import java.io.OutputStream;
 
-@CapacitorPlugin(name = "SavePhoto")
+@CapacitorPlugin(name = "SavePhoto", permissions = {
+        @Permission(strings = { Manifest.permission.CAMERA }, alias = "camera")
+})
 public class SavePhotoPlugin extends Plugin {
 
+  /* ---------- save photo to the gallery ---------- */
   @PluginMethod
   public void save(PluginCall call) {
     String b64 = call.getString("base64");
@@ -27,12 +34,11 @@ public class SavePhotoPlugin extends Plugin {
       values.put(MediaStore.Images.Media.DISPLAY_NAME, name);
       values.put(MediaStore.Images.Media.MIME_TYPE, mime);
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        /* lands in the Gallery under Pictures/Yoyo Birthday */
         values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Yoyo Birthday");
       }
 
       Uri uri = getContext().getContentResolver()
-          .insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+              .insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
       if (uri == null) { call.reject("could not create the file"); return; }
 
       byte[] bytes = Base64.decode(b64, Base64.DEFAULT);
@@ -46,6 +52,25 @@ public class SavePhotoPlugin extends Plugin {
       call.resolve(ret);
     } catch (Exception e) {
       call.reject("save failed: " + e.getMessage(), e);
+    }
+  }
+
+  /* ---------- request camera permission (AR selfie mode) ---------- */
+  @PluginMethod
+  public void requestCameraPermission(PluginCall call) {
+    if (getPermissionStates().get("camera") == PermissionState.GRANTED) {
+      call.resolve(new JSObject());
+      return;
+    }
+    requestPermissionForAlias("camera", call, "cameraPermissionCallback");
+  }
+
+  @PermissionCallback
+  private void cameraPermissionCallback(PluginCall call) {
+    if (getPermissionStates().get("camera") == PermissionState.GRANTED) {
+      call.resolve(new JSObject());
+    } else {
+      call.reject("camera permission denied");
     }
   }
 }

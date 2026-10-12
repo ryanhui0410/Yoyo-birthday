@@ -94,7 +94,7 @@ export default function Cake3D({ candles, blowing }){
 
     const camera = new THREE.PerspectiveCamera(
       45, mount.clientWidth / Math.max(1, mount.clientHeight), .1, 1000);
-    camera.position.set(0, 10, 16);   
+    camera.position.set(0, 2.4, 0);   
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));

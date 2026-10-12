@@ -105,7 +105,6 @@ const plateInMat  = new THREE.MeshStandardMaterial({ color:0xffedf4, roughness:0
 const defaultCandleTex = defaultCandleTexture();
 
 /* ---------------- dripping cream skirt ---------------- */
-
 function createDripSkirt(R, baseDepth, seed){
   const rnd = mulberry32(seed);
   const segs=200, rows=34;
@@ -222,7 +221,7 @@ function starGeo(finalR, finalD){
 
 /* ============================================================ */
 
-export default function PeachCake3D({ candles, blowing }){
+export default function PeachCake3D({ candles, blowing, zoom = 1 }){
   const mountRef = useRef(null);
   const engineRef = useRef(null);
 
@@ -232,9 +231,16 @@ export default function PeachCake3D({ candles, blowing }){
 
     const camera = new THREE.PerspectiveCamera(
       38, mount.clientWidth / Math.max(1, mount.clientHeight), 0.1, 100);
-    camera.position.set(0.6, 3.6, 8.8);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    /* pull the camera back along its existing direction, controlled by `zoom` */
+    const camTarget = new THREE.Vector3(0, 2.05, 0);
+    const camOffset = new THREE.Vector3(0.6, 3.6, 8.8)
+      .sub(camTarget)
+      .multiplyScalar(1 / zoom);          // zoom < 1 → farther away → more cake fits
+    camera.position.copy(camTarget).add(camOffset);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true,
+      preserveDrawingBuffer: true });   /* ← add — allows photo capture */
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.shadowMap.enabled = true;

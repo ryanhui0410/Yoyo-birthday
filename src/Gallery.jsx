@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { listRemotePhotos, fetchPhotoBlob, fetchPhotoOriginal, uploadPhoto }
   from './photosService.js';
-
+import { registerPlugin } from '@capacitor/core';
+const SavePhoto = registerPlugin('SavePhoto');
 const TILTS = [-3.2, 2.4, -1.6, 3.4, -2.6, 1.2];
 const ZMAX = 6;
 
@@ -249,7 +250,7 @@ export default function Gallery({ onBack, initialRemote }) {
 
       if (window.Capacitor && window.Capacitor.isNativePlatform &&
           window.Capacitor.isNativePlatform()){
-        const { SavePhoto } = window.Capacitor.Plugins;
+        // const { SavePhoto } = window.Capacitor.Plugins;
         const b64 = await blobToB64(blob);
         await SavePhoto.save({ base64: b64, name: fname, mime });
         setSavedMsg('Saved to your gallery ✓');
