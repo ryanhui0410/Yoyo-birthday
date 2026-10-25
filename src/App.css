@@ -236,3 +236,34 @@
   cursor:pointer;
 }
 .cake-ico{ font-size:19px; line-height:1; }
+/* ═══════════════════════════════════════════
+   Party phase — move content up
+   Add these at the END of your CSS file
+   ═══════════════════════════════════════════ */
+
+/* ── party text block: "Happy Birthday / Yoyo! / replay" ── */
+.app.party .party {
+  margin-top: -130px;              /* ← bigger negative = higher */
+  margin-bottom: 0;
+}
+
+/* tighten the gaps inside */
+.app.party .party .eyebrow {
+  margin-bottom: 2px;
+}
+.app.party .party .big {
+  margin: 0 0 8px;
+}
+.app.party .party .again {
+  margin-top: 2px;
+}
+
+/* ── cake zone — lift the 3D canvas ── */
+.app.party .cake-zone {
+  transform: translateY(-130px);   /* ← bigger negative = higher */
+}
+
+/* ── intro phase — slight lift so count text isn't cramped ── */
+.app.intro .cake-zone {
+  transform: translateY(-130px);
+}

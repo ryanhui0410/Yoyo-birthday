@@ -38,3 +38,10 @@ export const StarIcon = () => (
     <path d="M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4z"/>
   </svg>
 );
+export const VideoIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="5" width="14" height="14" rx="3"/>
+    <path d="M16 10l6-3v10l-6-3"/>
+  </svg>
+);

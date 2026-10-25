@@ -1,55 +1,107 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { listRemotePhotos, fetchPhotoBlob, fetchPhotoOriginal, uploadPhoto }
-  from './photosService.js';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  listRemotePhotos, fetchPhotoBlob, fetchPhotoOriginal, uploadPhoto
+} from './photosService.js';
 import { registerPlugin } from '@capacitor/core';
+
 const SavePhoto = registerPlugin('SavePhoto');
 const TILTS = [-3.2, 2.4, -1.6, 3.4, -2.6, 1.2];
 const ZMAX = 6;
+
+/* ═══════════════ ICONS ═══════════════ */
 
 export function PhotoIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="3" width="18" height="18" rx="2"/>
-      <circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15.5 16 10l-9 9"/>
+      <circle cx="8.5" cy="8.5" r="1.5"/>
+      <path d="M21 15.5 16 10l-9 9"/>
     </svg>
   );
 }
+
 const PlusIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-    strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    strokeLinecap="round" aria-hidden="true">
+    <path d="M12 5v14M5 12h14"/>
+  </svg>
 );
+
 const SyncIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/>
+    <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/>
+    <path d="M21 3v5h-5"/>
   </svg>
 );
+
 const DownloadIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-    <path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>
+    <path d="M7 10l5 5 5-5"/>
+    <path d="M12 15V3"/>
   </svg>
 );
 
-/* photo fetched live from GitHub (display-quality) */
+/* ═══════════════ LAZY REMOTE PHOTO ═══════════════ */
+/* Only fetches the blob when scrolled into view (IntersectionObserver) */
+
 function RemotePhoto({ item, caption, className }) {
   const [url, setUrl] = useState(null);
   const [failed, setFailed] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const ref = useRef(null);
+
+  /* observe visibility — rootMargin 300px = start loading before visible */
   useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          io.disconnect();  // only need to detect once
+        }
+      },
+      { rootMargin: '300px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  /* fetch blob only after visible */
+  useEffect(() => {
+    if (!visible) return;
     let dead = false, obj = null;
     fetchPhotoBlob(item)
-      .then(blob => { obj = URL.createObjectURL(blob); if (!dead) setUrl(obj); })
+      .then(blob => {
+        obj = URL.createObjectURL(blob);
+        if (!dead) setUrl(obj);
+      })
       .catch(() => { if (!dead) setFailed(true); });
     return () => { dead = true; if (obj) URL.revokeObjectURL(obj); };
-  }, [item]);
-  if (failed) return (
-    <div className="g-fail" role="img"><p>couldn't load this photo</p>
-      <p className="g-fail-f">{caption}</p></div>);
-  if (!url) return <div className="g-load" aria-hidden="true"><span/></div>;
-  return <img src={url} alt={caption} className={className} loading="lazy"/>;
+  }, [item, visible]);
+
+  return (
+    <div ref={ref} className="g-photo-wrap">
+      {failed ? (
+        <div className="g-fail" role="img">
+          <p>couldn't load this photo</p>
+          <p className="g-fail-f">{caption}</p>
+        </div>
+      ) : !url ? (
+        <div className="g-load" aria-hidden="true"><span/></div>
+      ) : (
+        <img src={url} alt={caption} className={className}
+          loading="lazy" decoding="async"/>
+      )}
+    </div>
+  );
 }
+
+/* ═══════════════ HELPERS ═══════════════ */
 
 const blobToB64 = blob => new Promise((res, rej) => {
   const r = new FileReader();
@@ -58,7 +110,10 @@ const blobToB64 = blob => new Promise((res, rej) => {
   r.readAsDataURL(blob);
 });
 
+/* ═══════════════ GALLERY ═══════════════ */
+
 export default function Gallery({ onBack, initialRemote }) {
+
   /* ---------- state ---------- */
   const [open, setOpen] = useState(null);
   const [remote, setRemote] = useState(initialRemote || []);
@@ -71,7 +126,7 @@ export default function Gallery({ onBack, initialRemote }) {
   const fileRef = useRef(null);
   const touchX = useRef(null);
 
-  /* ---------- zoom: all imperative, zero re-renders ---------- */
+  /* ---------- zoom: imperative, zero re-renders ---------- */
   const zoomEl = useRef(null);
   const z = useRef({ s: 1, x: 0, y: 0 });
   const pts = useRef(new Map());
@@ -79,7 +134,8 @@ export default function Gallery({ onBack, initialRemote }) {
   const lastTap = useRef(0);
 
   const applyZoom = () => {
-    const el = zoomEl.current; if (!el) return;
+    const el = zoomEl.current;
+    if (!el) return;
     const v = z.current;
     el.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.s})`;
     el.classList.toggle('active', v.s > 1);
@@ -91,36 +147,44 @@ export default function Gallery({ onBack, initialRemote }) {
     try {
       setRemote(await listRemotePhotos());
       if (!silent) setSyncErr('');
-    } catch (e) {
+    } catch {
       if (!silent) setSyncErr('sync failed — showing last saved photos');
     }
     if (!silent) setSyncing(false);
   }, []);
 
   useEffect(() => { refresh(true); }, [refresh]);
+
+  /* Auto-refresh every 5 min, skip when tab is hidden */
   useEffect(() => {
-    const id = setInterval(() => refresh(true), 30000);
+    const id = setInterval(() => {
+      if (!document.hidden) refresh(true);
+    }, 300000);
     return () => clearInterval(id);
   }, [refresh]);
+
+  /* cleanup fresh blob URLs on unmount */
   useEffect(() => () => {
     fresh.forEach(f => f.url && URL.revokeObjectURL(f.url));
   }, [fresh]);
 
-  /* reset the zoom whenever the photo changes or the lightbox closes */
+  /* reset zoom on photo change / lightbox close */
   useEffect(() => {
     z.current = { s: 1, x: 0, y: 0 };
-    pts.current.clear(); gest.current = null;
+    pts.current.clear();
+    gest.current = null;
     applyZoom();
   }, [open]);
 
-  /* ---------- the wall ---------- */
+  /* ---------- photo list ---------- */
   const tsOf = n => +((n.match(/^yoyo-(\d+)/) || [0, 0])[1]);
   const remoteSorted = [...remote].sort((a, b) => tsOf(b.name) - tsOf(a.name));
   const freshNames = new Set(fresh.map(f => f.name));
 
   const photos = [
-    ...fresh.map(f => ({ kind: 'f', url: f.url, name: f.name,
-      caption: 'a new memory' })),
+    ...fresh.map(f => ({
+      kind: 'f', url: f.url, name: f.name, caption: 'a new memory'
+    })),
     ...remoteSorted
       .filter(r => !freshNames.has(r.name))
       .map(r => ({
@@ -130,7 +194,7 @@ export default function Gallery({ onBack, initialRemote }) {
       }))
   ];
 
-  /* ---------- lightbox navigation ---------- */
+  /* ---------- lightbox nav ---------- */
   const close = useCallback(() => setOpen(null), []);
   const step = useCallback((d) => {
     setOpen(o => (o === null ? o : (o + d + photos.length) % photos.length));
@@ -169,7 +233,7 @@ export default function Gallery({ onBack, initialRemote }) {
     await refresh(true);
   };
 
-  /* ---------- zoom & pan gestures (imperative → smooth) ---------- */
+  /* ---------- zoom & pan gestures ---------- */
   const clampS = s => Math.min(ZMAX, Math.max(1, s));
 
   const zoomDown = (e) => {
@@ -177,60 +241,75 @@ export default function Gallery({ onBack, initialRemote }) {
     pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const list = [...pts.current.values()];
     if (list.length === 1)
-      gest.current = { mode: 'pan', zoom: { ...z.current },
-        x: e.clientX, y: e.clientY, moved: false };
-    else if (list.length === 2){
+      gest.current = {
+        mode: 'pan', zoom: { ...z.current }, x: e.clientX, y: e.clientY, moved: false
+      };
+    else if (list.length === 2) {
       const [a, b] = list;
-      gest.current = { mode: 'pinch', zoom: { ...z.current },
+      gest.current = {
+        mode: 'pinch', zoom: { ...z.current },
         dist: Math.hypot(a.x - b.x, a.y - b.y) || 1,
-        mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, moved: true };
+        mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, moved: true
+      };
     }
   };
+
   const zoomMove = (e) => {
     if (!pts.current.has(e.pointerId)) return;
     e.stopPropagation();
     pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    const g = gest.current; if (!g) return;
+    const g = gest.current;
+    if (!g) return;
     const list = [...pts.current.values()];
-    if (g.mode === 'pinch' && list.length >= 2){
+    if (g.mode === 'pinch' && list.length >= 2) {
       const [a, b] = list;
       const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       const s = clampS(g.zoom.s * d / g.dist);
-      z.current = { s,
-        x: g.zoom.x + (mid.x - g.mid.x), y: g.zoom.y + (mid.y - g.mid.y) };
+      z.current = {
+        s, x: g.zoom.x + (mid.x - g.mid.x), y: g.zoom.y + (mid.y - g.mid.y)
+      };
       applyZoom();
-    } else if (g.mode === 'pan' && list.length === 1 && g.zoom.s > 1){
+    } else if (g.mode === 'pan' && list.length === 1 && g.zoom.s > 1) {
       g.moved = true;
-      z.current = { s: g.zoom.s,
-        x: g.zoom.x + (e.clientX - g.x), y: g.zoom.y + (e.clientY - g.y) };
+      z.current = {
+        s: g.zoom.s,
+        x: g.zoom.x + (e.clientX - g.x), y: g.zoom.y + (e.clientY - g.y)
+      };
       applyZoom();
     }
   };
+
   const zoomUp = (e) => {
     if (!pts.current.has(e.pointerId)) return;
     e.stopPropagation();
     pts.current.delete(e.pointerId);
-    if (pts.current.size === 0){
-      const g = gest.current; gest.current = null;
-      /* a clean tap (no drag) — double-tap toggles the zoom */
-      if (g && g.mode === 'pan' && !g.moved){
+    if (pts.current.size === 0) {
+      const g = gest.current;
+      gest.current = null;
+      if (g && g.mode === 'pan' && !g.moved) {
         const now = Date.now();
-        if (now - lastTap.current < 300){
-          z.current = z.current.s > 1 ? { s: 1, x: 0, y: 0 } : { s: 2.4, x: 0, y: 0 };
+        if (now - lastTap.current < 300) {
+          z.current = z.current.s > 1
+            ? { s: 1, x: 0, y: 0 } : { s: 2.4, x: 0, y: 0 };
           applyZoom();
           lastTap.current = 0;
         } else lastTap.current = now;
       }
-    } else if (pts.current.size === 1){
+    } else if (pts.current.size === 1) {
       const [a] = [...pts.current.values()];
-      gest.current = { mode: 'pan', zoom: { ...z.current }, x: a.x, y: a.y, moved: true };
+      gest.current = {
+        mode: 'pan', zoom: { ...z.current }, x: a.x, y: a.y, moved: true
+      };
     }
   };
+
   const zoomWheel = (e) => {
     e.stopPropagation();
-    z.current = { ...z.current,
-      s: clampS(z.current.s * (e.deltaY < 0 ? 1.15 : .87)) };
+    z.current = {
+      ...z.current,
+      s: clampS(z.current.s * (e.deltaY < 0 ? 1.15 : .87))
+    };
     applyZoom();
   };
 
@@ -248,9 +327,7 @@ export default function Gallery({ onBack, initialRemote }) {
       const ext = (fname.split('.').pop() || 'jpg').toLowerCase();
       const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
 
-      if (window.Capacitor && window.Capacitor.isNativePlatform &&
-          window.Capacitor.isNativePlatform()){
-        // const { SavePhoto } = window.Capacitor.Plugins;
+      if (window.Capacitor?.isNativePlatform?.()) {
         const b64 = await blobToB64(blob);
         await SavePhoto.save({ base64: b64, name: fname, mime });
         setSavedMsg('Saved to your gallery ✓');
@@ -272,8 +349,9 @@ export default function Gallery({ onBack, initialRemote }) {
   const swallow = (e) => e.stopPropagation();
 
   const renderImg = (p, hero) => {
-    if (p.kind === 'f') return <img src={p.url} alt={p.caption}
-      className={hero ? 'g-hero' : undefined} decoding="async"/>;
+    if (p.kind === 'f')
+      return <img src={p.url} alt={p.caption}
+        className={hero ? 'g-hero' : undefined} decoding="async"/>;
     return <RemotePhoto item={p.item} caption={p.caption}
       className={hero ? 'g-hero' : undefined}/>;
   };
@@ -281,11 +359,13 @@ export default function Gallery({ onBack, initialRemote }) {
   /* ---------- render ---------- */
   return (
     <div className="gallery" onPointerDown={swallow}>
+
       <header className="g-head">
         <button className="g-back" onClick={onBack}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
             strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
+            <path d="M19 12H5"/>
+            <path d="M12 19l-7-7 7-7"/>
           </svg>
           back to the cake
         </button>
@@ -295,8 +375,8 @@ export default function Gallery({ onBack, initialRemote }) {
         </p>
 
         <div className="g-tools">
-          <button className="g-add" onClick={() => fileRef.current && fileRef.current.click()}
-            disabled={!!upload}>
+          <button className="g-add"
+            onClick={() => fileRef.current?.click()} disabled={!!upload}>
             <PlusIcon/> add photos
           </button>
           <input ref={fileRef} type="file" accept="image/*,.heic,.heif" multiple
@@ -306,6 +386,7 @@ export default function Gallery({ onBack, initialRemote }) {
             <SyncIcon/>
           </button>
         </div>
+
         {upload && <p className="g-status">uploading {upload.done}/{upload.total}…</p>}
         {syncErr && <p className="g-status err">{syncErr}</p>}
       </header>
@@ -322,7 +403,10 @@ export default function Gallery({ onBack, initialRemote }) {
           {photos.map((p, i) => (
             <figure key={p.kind === 'f' ? p.name : p.item.sha}
               className={'g-card' + (p.kind === 'f' ? ' is-new' : '')}
-              style={{ '--tilt': TILTS[i % TILTS.length] + 'deg', '--dly': (i % 7) * 60 + 'ms' }}
+              style={{
+                '--tilt': TILTS[i % TILTS.length] + 'deg',
+                '--dly': (i % 7) * 60 + 'ms'
+              }}
               onClick={() => setOpen(i)}>
               {renderImg(p, false)}
             </figure>
@@ -330,26 +414,29 @@ export default function Gallery({ onBack, initialRemote }) {
         </div>
       )}
 
+      {/* ═══ LIGHTBOX ═══ */}
       {open !== null && photos[open] && (() => {
         const p = photos[open];
         return (
-          <div className="g-light" onClick={close} role="dialog" aria-modal="true"
+          <div className="g-light" onClick={close}
+            role="dialog" aria-modal="true"
             onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
             onTouchEnd={(e) => {
               if (touchX.current === null) return;
-              if (z.current.s > 1){ touchX.current = null; return; }
+              if (z.current.s > 1) { touchX.current = null; return; }
               const dx = e.changedTouches[0].clientX - touchX.current;
               if (Math.abs(dx) > 40) step(dx < 0 ? 1 : -1);
               touchX.current = null;
             }}>
+
             <button className="g-nav prev" aria-label="previous photo"
               onClick={(e) => { e.stopPropagation(); step(-1); }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                 strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M15 18l-6-6 6-6"/></svg>
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
             </button>
 
-            {/* zoomable / pannable photo — transform driven imperatively */}
             <div ref={zoomEl} className="g-zoom"
               onPointerDown={zoomDown} onPointerMove={zoomMove}
               onPointerUp={zoomUp} onPointerCancel={zoomUp}
@@ -361,15 +448,17 @@ export default function Gallery({ onBack, initialRemote }) {
               onClick={(e) => { e.stopPropagation(); step(1); }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                 strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M9 6l6 6-6 6"/></svg>
+                <path d="M9 6l6 6-6 6"/>
+              </svg>
             </button>
+
             <div className="g-cap">
               <span className="g-cap-n">{open + 1} / {photos.length}</span>
             </div>
 
-            <button className="g-dl" onClick={(e) => { e.stopPropagation(); downloadPhoto(); }}
-              disabled={downloading} aria-label="save photo"
-              title="save this photo">
+            <button className="g-dl"
+              onClick={(e) => { e.stopPropagation(); downloadPhoto(); }}
+              disabled={downloading} aria-label="save photo" title="save this photo">
               <DownloadIcon/>
             </button>
 
@@ -387,7 +476,9 @@ export default function Gallery({ onBack, initialRemote }) {
             <button className="g-close" aria-label="close" onClick={close}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                 strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>
+                <path d="M18 6 6 18"/>
+                <path d="M6 6l12 12"/>
+              </svg>
             </button>
           </div>
         );
