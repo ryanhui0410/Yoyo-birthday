@@ -8,6 +8,63 @@ const SavePhoto = registerPlugin('SavePhoto');
 const TILTS = [-3.2, 2.4, -1.6, 3.4, -2.6, 1.2];
 const ZMAX = 6;
 const FOLDERS_KEY = 'yoyo-gallery-folders';
+const DOWNLOADS_KEY = 'yoyo-downloaded-photos';
+
+/* ═══════════════ IMAGE COMPRESSION ═══════════════ */
+/* Resizes + compresses before upload → much faster */
+function compressImage(file, maxDim = 1920, quality = 0.82) {
+  return new Promise((resolve) => {
+    /* skip non-images */
+    if (!file.type.startsWith('image/')) { resolve(file); return; }
+    /* skip small files */
+    if (file.size < 200 * 1024) { resolve(file); return; }
+
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width: w, height: h } = img;
+      /* scale down if larger than maxDim */
+      if (w > maxDim || h > maxDim) {
+        const ratio = Math.min(maxDim / w, maxDim / h);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+      }
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      cv.toBlob((blob) => {
+        if (blob && blob.size < file.size) {
+          /* create a new File so uploadPhoto still works */
+          resolve(new File([blob], file.name, {
+            type: 'image/jpeg', lastModified: Date.now()
+          }));
+        } else {
+          resolve(file);
+        }
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
+/* ═══════════════ DOWNLOADED TRACKING ═══════════════ */
+function loadDownloaded() {
+  try {
+    return JSON.parse(localStorage.getItem(DOWNLOADS_KEY)) || [];
+  } catch { return []; }
+}
+function markDownloaded(name) {
+  const list = loadDownloaded();
+  if (!list.includes(name)) {
+    list.push(name);
+    localStorage.setItem(DOWNLOADS_KEY, JSON.stringify(list));
+  }
+}
+function isDownloaded(name) {
+  return loadDownloaded().includes(name);
+}
 
 /* ═══════════════ BLOB CACHE ═══════════════ */
 const blobCache = new Map();
@@ -133,6 +190,15 @@ const CheckCircleIcon = ({ size = 22 }) => (
   </svg>
 );
 
+const WarnIcon = ({ size = 22 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+    strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 9v4"/><path d="M12 17h.01"/>
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+  </svg>
+);
+
 /* ═══════════════ THUMBNAIL ═══════════════ */
 function ThumbPhoto({ item, caption, className }) {
   const [failed, setFailed] = useState(false);
@@ -157,7 +223,7 @@ function ThumbPhoto({ item, caption, className }) {
   );
 }
 
-/* ═══════════════ HERO IMAGE — download_url directly (fast) ═══════════════ */
+/* ═══════════════ HERO IMAGE ═══════════════ */
 function HeroPhoto({ item, caption, className }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -219,6 +285,7 @@ export default function Gallery({ onBack, initialRemote }) {
   const [remote, setRemote] = useState(initialRemote || []);
   const [fresh, setFresh] = useState([]);
   const [upload, setUpload] = useState(null);
+  const [uploadPhase, setUploadPhase] = useState('');  // 'compressing' | 'uploading'
   const [syncing, setSyncing] = useState(false);
   const [syncErr, setSyncErr] = useState('');
   const [downloading, setDownloading] = useState(false);
@@ -331,7 +398,6 @@ export default function Gallery({ onBack, initialRemote }) {
     return result;
   }, [fresh, remoteSorted]);
 
-  /* ✅ Actual matching photo count per folder */
   const folderPhotoCounts = useMemo(() => {
     const nameSet = new Set(allPhotos.map(p => getPhotoKey(p)));
     const map = {};
@@ -448,15 +514,23 @@ export default function Gallery({ onBack, initialRemote }) {
     return () => window.removeEventListener('keydown', kd);
   }, [open, close, step]);
 
+  /* ✅ FAST UPLOAD: compress first, then upload */
   const onPick = async (e) => {
     const files = [...e.target.files];
     e.target.value = '';
     if (!files.length) return;
     setSyncErr('');
+
     for (let i = 0; i < files.length; i++) {
       setUpload({ done: i, total: files.length });
+      setUploadPhase('compressing');
       try {
-        const { name, blob } = await uploadPhoto(files[i]);
+        /* step 1: compress (fast, local) */
+        const compressed = await compressImage(files[i]);
+
+        /* step 2: upload (slower, network) */
+        setUploadPhase('uploading');
+        const { name, blob } = await uploadPhoto(compressed);
         const url = URL.createObjectURL(blob);
         setFresh(f => [{ name, url }, ...f]);
         if (activeFolder) {
@@ -468,11 +542,13 @@ export default function Gallery({ onBack, initialRemote }) {
         }
       } catch (err) {
         setUpload(null);
+        setUploadPhase('');
         setSyncErr('upload failed: ' + (err.message || 'check token & connection'));
         return;
       }
     }
     setUpload(null);
+    setUploadPhase('');
     await refresh(true);
     showToast('Photos uploaded ✓');
   };
@@ -534,26 +610,39 @@ export default function Gallery({ onBack, initialRemote }) {
     applyZoom();
   };
 
+  /* ✅ DUPLICATE DOWNLOAD CHECK */
   const downloadPhoto = async () => {
     const p = displayPhotos[open];
     if (!p || downloading) return;
+    const fname = p.name || 'yoyo-photo.jpg';
+
+    /* check if already downloaded */
+    if (isDownloaded(fname)) {
+      const again = window.confirm(
+        `"${fname}" has already been downloaded to this phone.\n\nDo you want to download it again?`
+      );
+      if (!again) return;
+    }
+
     setDownloading(true); setSavedMsg('');
     try {
       const blob = p.kind === 'f'
         ? await (await fetch(p.url)).blob()
         : await fetchPhotoOriginal(p.item);
-      const fname = p.name || 'yoyo-photo.jpg';
       const ext = (fname.split('.').pop()||'jpg').toLowerCase();
       const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+
       if (window.Capacitor?.isNativePlatform?.()) {
         const b64 = await blobToB64(blob);
         await SavePhoto.save({ base64:b64, name:fname, mime });
+        markDownloaded(fname);
         setSavedMsg('Saved to gallery ✓');
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href=url; a.download=fname;
         document.body.appendChild(a); a.click(); a.remove();
+        markDownloaded(fname);
         setSavedMsg('Downloaded ✓');
         setTimeout(() => URL.revokeObjectURL(url), 4000);
       }
@@ -589,7 +678,6 @@ export default function Gallery({ onBack, initialRemote }) {
   return (
     <div className="gallery" ref={swallowRef} onPointerDown={swallow}>
 
-      {/* ═══ SUCCESS TOAST ═══ */}
       {toastVisible && (
         <div className="g-success-toast">
           <CheckCircleIcon size={22}/>
@@ -597,7 +685,6 @@ export default function Gallery({ onBack, initialRemote }) {
         </div>
       )}
 
-      {/* ═══ HEADER ═══ */}
       <header className="g-head">
         <button className="g-back" onClick={() => {
           if (activeFolder) setActiveFolder(null);
@@ -616,7 +703,10 @@ export default function Gallery({ onBack, initialRemote }) {
         </p>
 
         <p className="g-count">
-          {displayPhotos.length} {displayPhotos.length === 1 ? 'frame' : 'frames'}
+          {activeFolder
+            ? `${displayPhotos.length} ${displayPhotos.length === 1 ? 'frame' : 'frames'}`
+            : `${allPhotos.length} ${allPhotos.length === 1 ? 'frame' : 'frames'}`
+          }
         </p>
 
         <div className="g-tools">
@@ -632,14 +722,24 @@ export default function Gallery({ onBack, initialRemote }) {
           </button>
         </div>
 
-        {upload && <p className="g-status">uploading {upload.done}/{upload.total}…</p>}
+        {/* ✅ Upload progress with phase indicator */}
+        {upload && (
+          <div className="g-upload-progress">
+            <div className="g-upload-bar">
+              <div className="g-upload-fill"
+                style={{ width: `${((upload.done + (uploadPhase === 'uploading' ? 0.5 : 0)) / upload.total * 100)}%` }}/>
+            </div>
+            <p className="g-status">
+              {uploadPhase === 'compressing' ? 'optimizing' : 'uploading'}
+              {' '}{upload.done + 1}/{upload.total}…
+            </p>
+          </div>
+        )}
         {syncErr && <p className="g-status err">{syncErr}</p>}
       </header>
 
-      {/* ═══ ROOT VIEW ═══ */}
       {!activeFolder && (
         <React.Fragment>
-
           {!showNewFolder ? (
             <div className="g-folder-bar">
               <button className="g-new-folder" onClick={() => setShowNewFolder(true)}>
@@ -743,7 +843,6 @@ export default function Gallery({ onBack, initialRemote }) {
         </React.Fragment>
       )}
 
-      {/* ═══ FOLDER VIEW ═══ */}
       {activeFolder && (
         <React.Fragment>
           <div className="g-folder-actions-bar">
@@ -790,7 +889,6 @@ export default function Gallery({ onBack, initialRemote }) {
         </React.Fragment>
       )}
 
-      {/* ═══ LIGHTBOX ═══ */}
       {open !== null && displayPhotos[open] && (() => {
         const p = displayPhotos[open];
         return (
@@ -805,7 +903,6 @@ export default function Gallery({ onBack, initialRemote }) {
               touchX.current=null;
             }}>
 
-            {/* TOP BAR: download + move + close */}
             <div className="g-light-topbar">
               <button className="g-action-btn"
                 onClick={(e)=>{ e.stopPropagation(); downloadPhoto(); }}
@@ -823,7 +920,6 @@ export default function Gallery({ onBack, initialRemote }) {
               </button>
             </div>
 
-            {/* prev arrow */}
             <button className="g-nav prev" aria-label="previous photo"
               onClick={(e)=>{ e.stopPropagation(); step(-1); }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
@@ -839,7 +935,6 @@ export default function Gallery({ onBack, initialRemote }) {
               {renderImg(p, true)}
             </div>
 
-            {/* next arrow */}
             <button className="g-nav next" aria-label="next photo"
               onClick={(e)=>{ e.stopPropagation(); step(1); }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
@@ -865,7 +960,6 @@ export default function Gallery({ onBack, initialRemote }) {
         );
       })()}
 
-      {/* ═══ MOVE-TO-FOLDER DIALOG ═══ */}
       {movingKeys && movingKeys.length > 0 && (
         <div className="g-move-overlay" onClick={() => setMovingKeys(null)}>
           <div className="g-move-dialog" onClick={e=>e.stopPropagation()}>

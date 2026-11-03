@@ -4,9 +4,13 @@
   "webDir": "dist",
   "android": {
     "adjustMarginsForEdgeToEdge": "force",
-    "allowMixedContent": true  
+    "allowMixedContent": true
   },
   "plugins": {
+    "LiveUpdates": {
+      "appId": "com.ryan.yoyobirthday",
+      "channel": "production"
+    },
     "SplashScreen": {
       "backgroundColor": "#221118",
       "showSpinner": false
