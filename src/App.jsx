@@ -56,7 +56,27 @@ export default function App(){
   useEffect(() => {
     relight();
   }, [birthdayIdx]);  // eslint-disable-line
+  import { CapacitorUpdater } from '@capgo/capacitor-updater';
 
+// Add this useEffect INSIDE your App() component:
+useEffect(() => {
+  const syncUpdate = async () => {
+    if (!window.Capacitor?.isNativePlatform?.()) return;
+    try {
+      await CapacitorUpdater.notifyAppReady();
+      const ver = await CapacitorUpdater.download({
+        url: 'https://ryanhui0410.github.io/Yoyo-birthday/update/',
+      });
+      if (ver && ver.bundle) {
+        await CapacitorUpdater.set({ id: ver.bundle.id });
+        // app reloads with new code
+      }
+    } catch (e) {
+      // offline or first install — use bundled version
+    }
+  };
+  syncUpdate();
+}, []);
   /* ---------- effects ---------- */
   useEffect(() => { listRemotePhotos().then(setBootRemote).catch(()=>{}); }, []);
 
