@@ -16,6 +16,7 @@ set VERSION=%D%%T%
 echo {"version":"%VERSION%","url":"./","notes":"Auto-deployed"} > public\update\manifest.json
 
 echo Committing to GitHub...
+git pull
 git add .
 git commit -m "live update %VERSION%"
 git push
