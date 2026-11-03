@@ -45,17 +45,20 @@ export const VideoIcon = () => (
     <path d="M16 10l6-3v10l-6-3"/>
   </svg>
 );
-export const BirthdayIcon = () => (
+export const CalendarIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
     strokeLinejoin="round" aria-hidden="true">
-    {/* cake body */}
-    <rect x="5" y="12" width="14" height="8" rx="2"/>
-    {/* candle */}
-    <rect x="11" y="7" width="2" height="5" rx="1"/>
-    {/* flame */}
-    <path d="M12 7c0-1.5 1.5-2 1.5-3.5S12 2 12 2s-1.5 1-1.5 1.5S12 7 12 7z"
-      fill="currentColor" stroke="none"/>
+    <rect x="3" y="4" width="18" height="18" rx="3"/>
+    <line x1="3" y1="10" x2="21" y2="10"/>
+    <line x1="8" y1="2" x2="8" y2="6"/>
+    <line x1="16" y1="2" x2="16" y2="6"/>
+    <circle cx="12" cy="15" r="1" fill="currentColor"/>
+    <circle cx="8" cy="15" r="1" fill="currentColor"/>
+    <circle cx="16" cy="15" r="1" fill="currentColor"/>
+    <circle cx="12" cy="19" r="1" fill="currentColor"/>
+    <circle cx="8" cy="19" r="1" fill="currentColor"/>
+    <circle cx="16" cy="19" r="1" fill="currentColor"/>
   </svg>
 );
 export const CloseIcon = ({ size = 18 }) => (

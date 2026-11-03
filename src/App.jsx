@@ -5,7 +5,7 @@ import { listRemotePhotos } from './photosService.js';
 import { AK } from './audio.js';
 import { makeConfetti } from './fx.js';
 import { makeCandles } from './candles.js';
-import { MessageIcon, VideoIcon, WindIcon, SoundOnIcon, SoundOffIcon, ReplayIcon, StarIcon, BirthdayIcon, CloseIcon } from './icons.jsx';
+import { MessageIcon, VideoIcon, WindIcon, SoundOnIcon, SoundOffIcon, ReplayIcon, StarIcon, CalendarIcon, CloseIcon } from './icons.jsx';
 import VideoModal from './components/VideoModal.jsx';
 import { BIRTHDAYS } from './components/birthdays.js';
 import './gallery.css';
@@ -256,7 +256,7 @@ export default function App(){
               setShowBirthdayList(v => !v);
             }}
             aria-label="choose birthday year" title="choose birthday year">
-            <BirthdayIcon/>
+            <CalendarIcon/>
           </button>
           {showBirthdayList && (
             <div className="birthday-list" onClick={e => e.stopPropagation()}>
