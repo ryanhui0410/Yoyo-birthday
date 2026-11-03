@@ -19,6 +19,7 @@
 .g-count{font-size:11px;letter-spacing:.3em;text-transform:uppercase;
   color:rgba(255,241,220,.45);font-weight:300}
 
+/* ── polaroid wall (legacy / fallback grid) ── */
 .g-wall{max-width:1080px;margin:0 auto;padding:12px 28px 90px;
   columns:240px;column-gap:24px}
 .g-card{break-inside:avoid;margin:0 0 24px;background:#f8f1e3;
@@ -37,19 +38,34 @@
 @keyframes gIn{from{opacity:0;transform:translateY(26px) rotate(var(--tilt,0deg)) scale(.9)}
   to{opacity:1;transform:translateY(0) rotate(var(--tilt,0deg)) scale(1)}}
 
-/* ---------- lightbox ---------- */
+/* "new" badge */
+.g-card.is-new::after{content:'new';position:absolute;top:10px;right:10px;z-index:2;
+  background:var(--coral);color:var(--ink);
+  font-family:Outfit,sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+
+/* ── lightbox ── */
 .g-light{position:fixed;inset:0;z-index:60;display:grid;place-items:center;
   background:rgba(12,4,6,.88);backdrop-filter:blur(6px);
   animation:gFade .25s ease both}
 @keyframes gFade{from{opacity:0}to{opacity:1}}
+
 .g-light img{max-width:min(88vw,1000px);max-height:78vh;display:block;
   border:10px solid #f8f1e3;border-radius:2px;
   box-shadow:0 30px 80px rgba(0,0,0,.6);cursor:default}
+
+.g-hero{max-width:min(88vw,1000px);max-height:78vh;display:block;
+  border:10px solid #f8f1e3;border-radius:2px;
+  box-shadow:0 30px 80px rgba(0,0,0,.6);cursor:default}
+
 .g-cap{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
   display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;
   padding:0 80px}
 .g-cap-t{font-family:Fraunces,serif;font-style:italic;font-size:15px;color:var(--ink)}
 .g-cap-n{font-size:10px;letter-spacing:.3em;color:rgba(255,241,220,.5);text-transform:uppercase}
+
+/* nav arrows — centered vertically on sides */
 .g-nav{position:fixed;top:50%;transform:translateY(-50%);width:46px;height:46px;
   border-radius:50%;border:1px solid rgba(255,241,220,.25);background:rgba(34,17,24,.5);
   color:var(--ink);cursor:pointer;display:grid;place-items:center;transition:.3s}
@@ -57,19 +73,22 @@
 .g-nav svg{width:16px;height:16px}
 .g-nav.prev{left:20px}
 .g-nav.next{right:20px}
-.g-close{position:fixed;top:48px;right:22px;width:40px;height:40px;border-radius:50%;
-  border:1px solid rgba(255,241,220,.25);background:rgba(34,17,24,.5);color:var(--ink);
-  cursor:pointer;display:grid;place-items:center;transition:.3s}
-.g-close:hover{border-color:var(--ink)}
-.g-close svg{width:14px;height:14px}
 
-/* ---------- empty state ---------- */
+/* ── zoomable photo ── */
+.g-zoom{transform-origin:center center;transition:transform .18s ease;
+  touch-action:none;cursor:zoom-in;user-select:none;-webkit-user-drag:none;
+  will-change:transform}
+.g-zoom.active{transition:none;cursor:grab}
+.g-zoom img{pointer-events:none}
+
+/* ── empty state ── */
 .g-empty{max-width:520px;margin:16vh auto 0;padding:0 28px;text-align:center}
 .g-empty p:first-child{font-family:Fraunces,serif;font-style:italic;
   font-size:1.4rem;color:rgba(255,241,220,.8)}
-.g-empty-hint{margin-top:12px;font-size:13px;color:rgba(255,241,220,.5);font-weight:300;line-height:1.6}
-.g-empty code{color:var(--butter);font-family:ui-monospace,monospace;font-size:12px}
-/* ---------- HEIC loading / failure states ---------- */
+.g-empty-hint{margin-top:12px;font-size:13px;color:rgba(255,241,220,.5);
+  font-weight:300;line-height:1.6}
+
+/* ── loading / failure ── */
 .g-load{aspect-ratio:4/5;width:100%;border-radius:1px;background:#dcd2c0;
   display:grid;place-items:center;position:relative}
 .g-load span{width:22px;height:22px;border-radius:50%;
@@ -82,10 +101,8 @@
   font-size:13px;color:#5a4636}
 .g-fail-f{font-size:10px;letter-spacing:.1em;text-transform:uppercase;
   color:rgba(90,70,54,.6)}
-.g-hero{max-width:min(88vw,1000px);max-height:78vh;display:block;
-  border:10px solid #f8f1e3;border-radius:2px;
-  box-shadow:0 30px 80px rgba(0,0,0,.6);cursor:default}
-  /* ---------- upload / token UI ---------- */
+
+/* ── tools (add / sync) ── */
 .g-tools{display:flex;align-items:center;gap:12px;margin-top:6px}
 .g-add{display:inline-flex;align-items:center;gap:8px;background:var(--coral);
   color:var(--ink);border:none;border-radius:999px;padding:11px 18px;
@@ -94,30 +111,9 @@
 .g-add:hover{filter:brightness(1.08)}
 .g-add:disabled{opacity:.5;cursor:wait}
 .g-add svg{width:13px;height:13px}
-.g-link{background:none;border:none;color:rgba(255,241,220,.5);font-family:Outfit,sans-serif;
-  font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;
-  border-bottom:1px dotted rgba(255,241,220,.4);padding:2px 0;transition:color .3s}
-.g-link:hover{color:var(--ink)}
-.g-token{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.g-token input{flex:1;min-width:220px;background:rgba(34,17,24,.6);border:1px solid rgba(255,241,220,.25);
-  border-radius:8px;padding:10px 12px;color:var(--ink);font-family:Outfit,sans-serif;
-  font-size:13px;outline:none}
-.g-token input:focus{border-color:var(--butter)}
-.g-token button{background:rgba(255,241,220,.12);border:1px solid rgba(255,241,220,.25);
-  color:var(--ink);border-radius:8px;padding:10px 16px;font-size:11px;font-weight:600;
-  letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
 .g-status{margin-top:10px;font-size:12px;color:var(--butter);letter-spacing:.1em}
 .g-status.err{color:#ff8a6a}
-/* ---------- "just uploaded" badge ---------- */
-.g-card.is-new::after{
-  content:'new';
-  position:absolute;top:10px;right:10px;z-index:2;
-  background:var(--coral);color:var(--ink);
-  font-family:Outfit,sans-serif;font-size:9px;font-weight:700;
-  letter-spacing:.18em;text-transform:uppercase;
-  padding:3px 8px;border-radius:999px;
-  box-shadow:0 2px 8px rgba(0,0,0,.35)}
-/* ---------- refresh button ---------- */
+
 .g-sync{display:inline-flex;align-items:center;justify-content:center;
   width:38px;height:38px;border-radius:50%;
   border:1px solid rgba(255,241,220,.25);background:rgba(34,17,24,.5);
@@ -125,252 +121,69 @@
 .g-sync:hover{color:var(--ink);border-color:rgba(255,241,220,.5)}
 .g-sync svg{width:15px;height:15px}
 .g-sync.spin svg{animation:gspin 1s linear infinite}
-/* ✨ Yoyo's Picture Styles */
-/* ✨ Updated Yoyo's Picture Styles */
-/* ✨ Yoyo's Picture Styles */
-/* ✨ Yoyo's Picture Styles */
-.yoyo-pic {
-  /* ✨ We use a CSS variable to control the downward shift! */
-  --y-shift: 0.15em; /* Moves the big picture down slightly */
-  
-  height: 0.8em; 
-  width: auto;
-  vertical-align: middle; 
-  margin-left: 0.2em;
-  border-radius: 50%;
-  border: 0.08em solid #fff1dc; 
-  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
-  
-  animation: picPopIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1.2) forwards;
-  animation-delay: 0.4s; 
-  opacity: 0;
-  
-  /* ✨ Starting position for the animation (no shift yet) */
-  transform: scale(0.5) rotate(-10deg) translateY(0); 
-}
 
-/* ✨ Intro picture: 15% larger than before, NO downward shift */
-.wish .yoyo-pic {
-  --y-shift: 0em; /* Keeps the intro picture perfectly aligned with the text */
-  height: 1.05em; /* Increased by another 15% (from 0.89em to 1.05em) */
-}
+/* ── yoyo picture ── */
+.yoyo-pic{--y-shift:0.15em;height:.8em;width:auto;vertical-align:middle;
+  margin-left:.2em;border-radius:50%;border:.08em solid #fff1dc;
+  box-shadow:0 4px 10px rgba(0,0,0,.25);
+  animation:picPopIn .8s cubic-bezier(.2,.8,.2,1.2) .4s forwards;opacity:0;
+  transform:scale(.5) rotate(-10deg) translateY(0)}
+.wish .yoyo-pic{--y-shift:0em;margin-top:-1vh;height:1.4em}
+@keyframes picPopIn{
+  to{opacity:1;transform:scale(1) rotate(0deg) translateY(var(--y-shift))}}
 
-/* ✨ Intro picture: 15% larger than base, NO downward shift */
-.wish .yoyo-pic {
-  margin-top: -1vh;
-  height: 1.4em; /* 15% larger than the 0.77em base */
-}
+/* ── party layout ── */
+main.party{margin-top:30vh;position:relative;z-index:10}
+.party h1.big{margin-bottom:2rem}
+.party .tag{margin-top:.5rem}
+.party .again{margin-top:1.5rem}
 
-/* ✨ Push the text below "Happy Birthday Yoyo!" lower to fix the overlap */
-.party h1.big {
-  margin-bottom: 2rem; /* Adds generous breathing room below the heading */
-}
+/* ── custom message modal ── */
+.write-msg-btn{margin-top:28px;background:none;
+  border:1px dashed rgba(255,241,220,.4);color:rgba(255,241,220,.7);
+  font-family:Outfit,sans-serif;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;padding:12px 24px;border-radius:999px;
+  cursor:pointer;transition:all .3s ease}
+.write-msg-btn:hover{background:rgba(255,241,220,.1);border-color:var(--butter);color:var(--ink)}
+.custom-msg-display{margin-top:35px;max-width:320px;padding:24px 28px;
+  background:#f8f1e3;border-radius:4px;
+  box-shadow:0 14px 30px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.25);
+  position:relative;transform:rotate(-2deg);
+  animation:msgPop .6s cubic-bezier(.2,.8,.2,1.2) forwards}
+.custom-msg-display p{font-family:Fraunces,serif;font-style:italic;font-size:18px;
+  color:#5a4636;line-height:1.5;margin:0;text-align:center}
+.edit-msg-btn{position:absolute;top:-12px;right:-12px;width:32px;height:32px;
+  border-radius:50%;background:var(--coral);border:2px solid #fff1dc;color:#fff;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 10px rgba(0,0,0,.3);transition:transform .2s}
+.edit-msg-btn:hover{transform:scale(1.1)}
+@keyframes msgPop{
+  from{opacity:0;transform:rotate(-2deg) translateY(20px) scale(.95)}
+  to{opacity:1;transform:rotate(-2deg) translateY(0) scale(1)}}
+.msg-modal-overlay{position:fixed;inset:0;z-index:100;
+  background:rgba(12,4,6,.85);backdrop-filter:blur(8px);
+  display:grid;place-items:center;animation:gFade .25s ease both;padding:20px}
+.msg-modal-box{background:#f8f1e3;padding:32px;border-radius:8px;
+  width:100%;max-width:420px;box-shadow:0 30px 80px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;gap:16px}
+.msg-modal-box h3{font-family:Fraunces,serif;font-style:italic;font-size:24px;
+  color:#5a4636;margin:0;text-align:center}
+.msg-modal-box textarea{width:100%;min-height:140px;padding:16px;
+  border:1px solid #dcd2c0;border-radius:4px;background:#fff;
+  font-family:Fraunces,serif;font-size:16px;color:#5a4636;
+  resize:vertical;outline:none;transition:border-color .2s;box-sizing:border-box}
+.msg-modal-box textarea:focus{border-color:var(--coral)}
+.msg-modal-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:8px}
+.msg-cancel,.msg-save{padding:12px 24px;border-radius:999px;
+  font-family:Outfit,sans-serif;font-weight:600;font-size:11px;
+  letter-spacing:.15em;text-transform:uppercase;cursor:pointer;border:none;
+  transition:filter .2s}
+.msg-cancel{background:transparent;color:#5a4636;border:1px solid #dcd2c0}
+.msg-cancel:hover{filter:brightness(.95)}
+.msg-save{background:var(--coral);color:#fff1dc}
+.msg-save:hover{filter:brightness(1.1)}
 
-.party .tag {
-  margin-top: 0.5rem;
-}
-
-.party .again {
-  margin-top: 1.5rem; /* Pushes the button further down */
-}
-
-@keyframes picPopIn {
-  to {
-    opacity: 1;
-    /* ✨ The magic happens here: it scales up, rotates to 0, AND slides down by var(--y-shift) */
-    transform: scale(1) rotate(0deg) translateY(var(--y-shift)); 
-  }
-}
-/* ✨ Push the entire party text section downwards */
-main.party {
-  margin-top: 30vh; /* Pushes the block down. Increase to 15vh or 20vh if you want it even lower! */
-  position: relative;
-  z-index: 10; /* Ensures the text stays cleanly above the background/cake */
-}
-/* ================= Custom Message Feature ================= */
-
-/* The Button to open the modal */
-.write-msg-btn {
-  margin-top: 28px;
-  background: none;
-  border: 1px dashed rgba(255, 241, 220, 0.4);
-  color: rgba(255, 241, 220, 0.7);
-  font-family: 'Outfit', sans-serif;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  padding: 12px 24px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-.write-msg-btn:hover {
-  background: rgba(255, 241, 220, 0.1);
-  border-color: var(--butter);
-  color: var(--ink);
-}
-
-/* The Saved Note Display */
-.custom-msg-display {
-  margin-top: 35px;
-  max-width: 320px;
-  padding: 24px 28px;
-  background: #f8f1e3; /* Matches the photo polaroids */
-  border-radius: 4px;
-  box-shadow: 0 14px 30px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.25);
-  position: relative;
-  transform: rotate(-2deg);
-  animation: msgPop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1.2) forwards;
-}
-.custom-msg-display p {
-  font-family: 'Fraunces', serif;
-  font-style: italic;
-  font-size: 18px;
-  color: #5a4636;
-  line-height: 1.5;
-  margin: 0;
-  text-align: center;
-}
-.edit-msg-btn {
-  position: absolute;
-  top: -12px;
-  right: -12px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--coral);
-  border: 2px solid #fff1dc;
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  transition: transform 0.2s;
-}
-.edit-msg-btn:hover { transform: scale(1.1); }
-
-@keyframes msgPop {
-  from { opacity: 0; transform: rotate(-2deg) translateY(20px) scale(0.95); }
-  to { opacity: 1; transform: rotate(-2deg) translateY(0) scale(1); }
-}
-
-/* The Session Box (Modal Overlay) */
-.msg-modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: rgba(12, 4, 6, 0.85);
-  backdrop-filter: blur(8px);
-  display: grid;
-  place-items: center;
-  animation: gFade 0.25s ease both;
-  padding: 20px;
-}
-
-.msg-modal-box {
-  background: #f8f1e3;
-  padding: 32px;
-  border-radius: 8px;
-  width: 100%;
-  max-width: 420px;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.msg-modal-box h3 {
-  font-family: 'Fraunces', serif;
-  font-style: italic;
-  font-size: 24px;
-  color: #5a4636;
-  margin: 0;
-  text-align: center;
-}
-
-.msg-modal-box textarea {
-  width: 100%;
-  min-height: 140px;
-  padding: 16px;
-  border: 1px solid #dcd2c0;
-  border-radius: 4px;
-  background: #fff;
-  font-family: 'Fraunces', serif;
-  font-size: 16px; /* 16px prevents iOS from auto-zooming when typing */
-  color: #5a4636;
-  resize: vertical;
-  outline: none;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
-}
-
-.msg-modal-box textarea:focus {
-  border-color: var(--coral);
-}
-
-.msg-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.msg-cancel, .msg-save {
-  padding: 12px 24px;
-  border-radius: 999px;
-  font-family: 'Outfit', sans-serif;
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  cursor: pointer;
-  border: none;
-  transition: filter 0.2s;
-}
-
-.msg-cancel {
-  background: transparent;
-  color: #5a4636;
-  border: 1px solid #dcd2c0;
-}
-.msg-cancel:hover { filter: brightness(0.95); }
-
-.msg-save {
-  background: var(--coral);
-  color: #fff1dc;
-}
-.msg-save:hover { filter: brightness(1.1); }
-  /* ---------- saved-photo toast ---------- */
-  .g-toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);
-    display:inline-flex;align-items:center;gap:9px;
-    background:rgba(34,17,24,.92);border:1px solid rgba(255,214,120,.45);
-    color:var(--butter);border-radius:999px;padding:11px 20px;
-    font-family:Outfit,sans-serif;font-size:11.5px;font-weight:600;
-    letter-spacing:.14em;text-transform:uppercase;
-    box-shadow:0 12px 32px rgba(0,0,0,.5);
-    pointer-events:auto;z-index:70;
-    animation:gToastIn .35s cubic-bezier(.2,1.4,.3,1) both}
-  .g-toast svg{width:14px;height:14px;flex:none}
-@keyframes gToastIn{
-  from{opacity:0;transform:translateX(-50%) translateY(16px) scale(.9)}
-  to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
-/* ---------- zoomable lightbox photo ---------- */
-.g-zoom{transform-origin:center center;transition:transform .18s ease;
-  touch-action:none;cursor:zoom-in;user-select:none;-webkit-user-drag:none;
-  will-change:transform}
-.g-zoom.active{transition:none;cursor:grab}
-.g-zoom img{pointer-events:none}
-
-/* ---------- download button (left of the close button) ---------- */
-.g-dl{position:fixed;top:48px;right:72px;width:40px;height:40px;border-radius:50%;
-  border:1px solid rgba(255,241,220,.25);background:rgba(34,17,24,.5);color:var(--ink);
-  cursor:pointer;display:grid;place-items:center;transition:.3s;z-index:70}
-.g-dl:hover{border-color:var(--ink)}
-.g-dl:disabled{opacity:.4;cursor:wait}
-.g-dl svg{width:15px;height:15px}
-
-/* ---------- saved-photo toast ---------- */
+/* ── lightbox saved-photo toast ── */
 .g-toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);
   display:inline-flex;align-items:center;gap:9px;
   background:rgba(34,17,24,.92);border:1px solid rgba(255,214,120,.45);
@@ -384,3 +197,424 @@ main.party {
 @keyframes gToastIn{
   from{opacity:0;transform:translateX(-50%) translateY(16px) scale(.9)}
   to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+
+/* ═══════════════════════════════════════
+   FOLDER SYSTEM
+   ═══════════════════════════════════════ */
+.g-folder-bar{display:flex;justify-content:center;padding:0 16px 12px}
+.g-new-folder{display:flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.08);border:1.5px dashed rgba(255,255,255,.2);
+  color:rgba(255,255,255,.6);padding:10px 18px;border-radius:12px;
+  cursor:pointer;font:inherit;font-size:13px;transition:all .2s}
+.g-new-folder:hover{border-color:rgba(255,255,255,.4);
+  color:rgba(255,255,255,.9);background:rgba(255,255,255,.12)}
+.g-new-folder-form{display:flex;gap:8px;align-items:center;
+  width:100%;max-width:400px}
+.g-folder-input{flex:1;background:rgba(255,255,255,.1);
+  border:1.5px solid rgba(255,255,255,.2);border-radius:10px;
+  padding:10px 14px;color:#fff;font:inherit;font-size:14px;outline:none}
+.g-folder-input:focus{border-color:rgba(255,107,74,.6)}
+.g-folder-input::placeholder{color:rgba(255,255,255,.35)}
+.g-folder-create{background:#ff6b4a;color:#fff;border:none;
+  padding:10px 16px;border-radius:10px;font:inherit;font-size:13px;
+  font-weight:600;cursor:pointer;white-space:nowrap}
+.g-folder-cancel{background:transparent;border:none;
+  color:rgba(255,255,255,.5);cursor:pointer;padding:8px;display:flex}
+
+/* folder card grid */
+.g-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:12px;padding:0 16px 16px}
+.g-folder-card{position:relative;background:rgba(255,255,255,.06);
+  border:1.5px solid rgba(255,255,255,.1);border-radius:14px;
+  padding:18px 12px 14px;display:flex;flex-direction:column;
+  align-items:center;gap:6px;cursor:pointer;transition:all .25s;
+  -webkit-tap-highlight-color:transparent}
+.g-folder-card:hover{background:rgba(255,255,255,.1);
+  border-color:rgba(255,255,255,.2);transform:translateY(-2px)}
+.g-folder-card.drag-over{border-color:#ff6b4a;
+  background:rgba(255,107,74,.12);transform:scale(1.03)}
+.g-folder-icon{color:rgba(255,200,120,.7);margin-bottom:2px}
+.g-folder-name{font-size:13px;font-weight:600;color:rgba(255,255,255,.85);
+  margin:0;text-align:center;max-width:100%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.g-folder-count{font-size:11px;color:rgba(255,255,255,.4);margin:0}
+
+/* folder card actions (rename / delete) */
+.g-folder-actions{position:absolute;top:6px;right:6px;display:flex;
+  gap:4px;opacity:0;transition:opacity .2s}
+.g-folder-card:hover .g-folder-actions{opacity:1}
+.g-folder-act{background:rgba(0,0,0,.4);border:none;border-radius:6px;
+  padding:4px;color:rgba(255,255,255,.7);cursor:pointer;display:flex;
+  transition:all .15s}
+.g-folder-act:hover{background:rgba(255,255,255,.2);color:#fff}
+.g-folder-act.danger:hover{background:rgba(255,60,60,.3);color:#ff6b6b}
+
+/* inline rename input */
+.g-folder-rename-inline{width:100%}
+.g-folder-input-sm{width:100%;background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,107,74,.5);border-radius:6px;
+  padding:4px 8px;color:#fff;font:inherit;font-size:13px;
+  text-align:center;outline:none}
+
+.g-section-label{padding:8px 16px 6px;font-size:11px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.3)}
+.g-folder-title{display:inline-flex;align-items:center;gap:6px}
+
+/* folder actions bar (rename / delete folder) */
+.g-folder-actions-bar{display:flex;justify-content:center;gap:10px;
+  padding:0 16px 12px}
+.g-folder-bar-btn{display:flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  border-radius:8px;padding:8px 14px;color:rgba(255,255,255,.6);
+  cursor:pointer;font:inherit;font-size:12px;transition:all .2s}
+.g-folder-bar-btn:hover{background:rgba(255,255,255,.12);
+  color:rgba(255,255,255,.9)}
+.g-folder-bar-btn.danger:hover{background:rgba(255,60,60,.15);
+  border-color:rgba(255,60,60,.3);color:#ff6b6b}
+
+/* ═══════════════════════════════════════
+   2-COLUMN PHOTO GRID
+   ═══════════════════════════════════════ */
+.g-folder-view-grid{display:grid;grid-template-columns:1fr 1fr;
+  gap:8px;padding:0 12px 24px}
+.g-folder-photo{position:relative;margin:0;border-radius:12px;
+  overflow:hidden;cursor:pointer;background:#1a1018;
+  aspect-ratio:1;animation:fadeIn .4s ease both}
+.g-folder-photo img{width:100%!important;height:100%!important;
+  object-fit:cover!important;display:block;transition:transform .3s ease}
+.g-folder-photo:hover img{transform:scale(1.05)}
+.g-folder-photo.is-new{border:2px solid rgba(255,107,74,.35)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}}
+
+/* photo action buttons (move / remove) */
+.g-move-btn,.g-remove-btn{position:absolute;top:8px;right:8px;
+  background:rgba(0,0,0,.55);border:none;border-radius:8px;
+  padding:6px;color:rgba(255,255,255,.8);cursor:pointer;z-index:3;
+  display:flex;transition:opacity .2s,background .15s}
+.g-remove-btn{border-radius:50%;width:26px;height:26px;
+  align-items:center;justify-content:center}
+.g-move-btn:hover{background:rgba(255,107,74,.7);color:#fff}
+.g-remove-btn:hover{background:rgba(255,60,60,.7);color:#fff}
+
+/* hover reveal on desktop */
+@media (hover:hover){
+  .g-move-btn,.g-remove-btn{opacity:0}
+  .g-folder-photo:hover .g-move-btn,
+  .g-folder-photo:hover .g-remove-btn{opacity:1}
+}
+/* always visible on touch */
+@media (hover:none){
+  .g-move-btn,.g-remove-btn{opacity:1}
+}
+.g-folder-photo:active .g-move-btn,
+.g-folder-photo:active .g-remove-btn{opacity:1}
+
+/* ═══════════════════════════════════════
+   MOVE-TO-FOLDER DIALOG
+   ═══════════════════════════════════════ */
+.g-move-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);
+  z-index:99999;display:flex;align-items:center;justify-content:center;
+  padding:20px}
+.g-move-dialog{background:#1e1218;border:1px solid rgba(255,255,255,.1);
+  border-radius:18px;padding:24px;width:100%;max-width:360px;
+  max-height:70vh;display:flex;flex-direction:column;gap:16px}
+.g-move-title{display:flex;align-items:center;gap:8px;
+  font-size:18px;color:#fff;margin:0}
+.g-move-list{display:flex;flex-direction:column;gap:6px;
+  overflow-y:auto;flex:1}
+.g-move-item{display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;padding:12px 14px;color:rgba(255,255,255,.8);
+  cursor:pointer;font:inherit;font-size:14px;transition:all .15s;
+  text-align:left}
+.g-move-item:hover{background:rgba(255,255,255,.12);
+  border-color:rgba(255,255,255,.2)}
+.g-move-item span:first-of-type{flex:1}
+.g-move-count{font-size:11px;color:rgba(255,255,255,.35);
+  background:rgba(255,255,255,.08);padding:2px 8px;border-radius:20px}
+.g-move-remove{border-color:rgba(255,60,60,.15);color:rgba(255,120,120,.8)}
+.g-move-remove:hover{background:rgba(255,60,60,.12);
+  border-color:rgba(255,60,60,.3)}
+.g-move-close{background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);border-radius:12px;
+  padding:12px;color:rgba(255,255,255,.6);cursor:pointer;
+  font:inherit;font-size:14px;transition:all .15s}
+.g-move-close:hover{background:rgba(255,255,255,.15);color:#fff}
+
+/* ═══════════════════════════════════════
+   LIGHTBOX TOP BAR — download + move + close
+   ═══════════════════════════════════════ */
+.g-light-topbar{position:absolute;top:48px;right:16px;
+  display:flex;align-items:center;gap:8px;z-index:30}
+.g-action-btn{width:42px;height:42px;border-radius:50%;
+  background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.15);
+  color:rgba(255,255,255,.85);cursor:pointer;display:flex;
+  align-items:center;justify-content:center;transition:all .2s;
+  backdrop-filter:blur(8px)}
+.g-action-btn:hover{background:rgba(255,107,74,.7);color:#fff;
+  transform:scale(1.08)}
+.g-action-btn:disabled{opacity:.5;cursor:default}
+.g-action-btn.g-close-btn:hover{background:rgba(255,60,60,.7)}
+
+/* ═══════════════════════════════════════
+   SUCCESS TOAST — slides in from top
+   ═══════════════════════════════════════ */
+.g-success-toast{position:fixed;top:110px;left:50%;
+  transform:translateX(-50%) translateY(-10px);
+  display:flex;align-items:center;gap:10px;
+  padding:14px 24px;background:rgba(34,197,94,.95);color:#fff;
+  border-radius:14px;font-size:15px;font-weight:600;z-index:999999;
+  box-shadow:0 12px 40px rgba(34,197,94,.35);
+  animation:toastSlideIn .35s cubic-bezier(.25,.8,.25,1) forwards,
+            toastFadeOut .4s ease 2.1s forwards;
+  pointer-events:none}
+@keyframes toastSlideIn{
+  from{opacity:0;transform:translateX(-50%) translateY(-30px) scale(.9)}
+  to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+@keyframes toastFadeOut{
+  from{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+  to{opacity:0;transform:translateX(-50%) translateY(-20px) scale(.95)}}
+  /* ═══════════════════════════════════════
+   FIX 1: icon-btn styles (missing)
+   ═══════════════════════════════════════ */
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 241, 220, 0.25);
+  background: rgba(34, 17, 24, 0.5);
+  color: rgba(255, 241, 220, 0.65);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.icon-btn:hover {
+  color: var(--ink);
+  border-color: rgba(255, 241, 220, 0.5);
+}
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ═══════════════════════════════════════
+   FIX 2: dropdown doesn't shift layout
+   ═══════════════════════════════════════ */
+.birthday-dropdown {
+  position: relative;
+  /* ← fixed size so flex doesn't resize */
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+
+.birthday-dropdown .icon-btn.active {
+  background: rgba(255, 107, 74, 0.3);
+  border-color: rgba(255, 107, 74, 0.5);
+  color: #ff6b4a;
+}
+
+.birthday-list {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;                    /* ← right-aligned so it never pushes left */
+  min-width: 200px;
+  background: rgba(30, 18, 24, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 8px;
+  z-index: 200;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  animation: dropdownIn 0.25s cubic-bezier(.25,.8,.25,1);
+  pointer-events: auto;
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.birthday-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 6px;
+}
+.birthday-list-header span {
+  font-family: 'Outfit', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 241, 220, 0.4);
+}
+.birthday-list-close {
+  background: none;
+  border: none;
+  color: rgba(255, 241, 220, 0.4);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  transition: color 0.15s;
+}
+.birthday-list-close:hover {
+  color: rgba(255, 241, 220, 0.8);
+}
+
+.birthday-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 241, 220, 0.7);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  transition: all 0.15s;
+  text-align: left;
+}
+.birthday-list-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 241, 220, 1);
+}
+.birthday-list-item.selected {
+  background: rgba(255, 107, 74, 0.15);
+  color: #ff6b4a;
+}
+.birthday-list-label {
+  flex: 1;
+  font-weight: 600;
+}
+.birthday-list-year {
+  font-size: 11px;
+  color: rgba(255, 241, 220, 0.35);
+  letter-spacing: 0.1em;
+}
+.birthday-list-check {
+  color: #ff6b4a;
+  font-weight: bold;
+  font-size: 14px;
+}
+/* ═══════════════════════════════════════
+   BIRTHDAY YEAR PICKER — centered modal
+   ═══════════════════════════════════════ */
+.birthday-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 2, 4, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  animation: gFade 0.25s ease both;
+  padding: 20px;
+}
+
+.birthday-modal {
+  background: #1e1218;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 28px;
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  animation: dropdownIn 0.3s cubic-bezier(.25,.8,.25,1);
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-16px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.birthday-modal-title {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 22px;
+  color: #fff;
+  margin: 0;
+  text-align: center;
+}
+
+.birthday-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.birthday-modal-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 241, 220, 0.7);
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+  transition: all 0.2s;
+  text-align: left;
+}
+.birthday-modal-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+.birthday-modal-item.selected {
+  background: rgba(255, 107, 74, 0.15);
+  border-color: rgba(255, 107, 74, 0.4);
+  color: #ff6b4a;
+}
+
+.birthday-modal-label {
+  flex: 1;
+  font-weight: 700;
+  font-size: 18px;
+}
+.birthday-modal-year {
+  font-size: 13px;
+  color: rgba(255, 241, 220, 0.35);
+  letter-spacing: 0.1em;
+}
+.birthday-modal-check {
+  color: #ff6b4a;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.birthday-modal-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 14px;
+  color: rgba(255, 241, 220, 0.6);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition: all 0.15s;
+}
+.birthday-modal-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}

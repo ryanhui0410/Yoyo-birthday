@@ -45,3 +45,23 @@ export const VideoIcon = () => (
     <path d="M16 10l6-3v10l-6-3"/>
   </svg>
 );
+export const BirthdayIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+    strokeLinejoin="round" aria-hidden="true">
+    {/* cake body */}
+    <rect x="5" y="12" width="14" height="8" rx="2"/>
+    {/* candle */}
+    <rect x="11" y="7" width="2" height="5" rx="1"/>
+    {/* flame */}
+    <path d="M12 7c0-1.5 1.5-2 1.5-3.5S12 2 12 2s-1.5 1-1.5 1.5S12 7 12 7z"
+      fill="currentColor" stroke="none"/>
+  </svg>
+);
+export const CloseIcon = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+    strokeLinejoin="round" aria-hidden="true">
+    <path d="M18 6 6 18"/><path d="M6 6l12 12"/>
+  </svg>
+);

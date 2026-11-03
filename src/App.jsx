@@ -5,21 +5,36 @@ import { listRemotePhotos } from './photosService.js';
 import { AK } from './audio.js';
 import { makeConfetti } from './fx.js';
 import { makeCandles } from './candles.js';
-import { MessageIcon, VideoIcon, WindIcon, SoundOnIcon, SoundOffIcon, ReplayIcon, StarIcon } from './icons.jsx';
-import Lights from './components/Lights.jsx';
-import Cake, { CAKES, CakeArt, ChocoChipArt } from './components/Cake.jsx';
-import Balloons from './components/Balloons.jsx';
-import Badge from './components/Badge.jsx';
-import MessageModal from './components/MessageModal.jsx';
+import { MessageIcon, VideoIcon, WindIcon, SoundOnIcon, SoundOffIcon, ReplayIcon, StarIcon, BirthdayIcon, CloseIcon } from './icons.jsx';
 import VideoModal from './components/VideoModal.jsx';
+import { BIRTHDAYS } from './components/birthdays.js';
 import './gallery.css';
-import { CANDLE_COUNT as PEACH_COUNT } from './components/PeachCake3D.jsx';
-import { CANDLE_COUNT as STRAWBERRY_COUNT } from './components/StrawberryCake3D.jsx';
+
+function ordinal(n) {
+  const s = ['th','st','nd','rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
 
 export default function App(){
 
-  /* ---------- state ---------- */
+  /* ---------- birthday selection ---------- */
+  const [birthdayIdx, setBirthdayIdx] = useState(BIRTHDAYS.length - 1);
+  const [showBirthdayList, setShowBirthdayList] = useState(false);
+  const birthday = BIRTHDAYS[birthdayIdx];
+  const ageLabel = ordinal(birthday.age);
+
+  const Cake        = birthday.Cake;
+  const Lights      = birthday.Lights;
+  const Balloons    = birthday.Balloons;
+  const Badge       = birthday.Badge;
+  const MessageModal= birthday.MessageModal;
+  const PEACH_COUNT = birthday.PEACH_COUNT;
+  const STRAWBERRY_COUNT = birthday.STRAWBERRY_COUNT;
+
   const countFor = (style) => (style === 'peach' ? PEACH_COUNT : STRAWBERRY_COUNT);
+
+  /* ---------- state ---------- */
   const [phase,setPhase] = useState('intro');
   const [candles,setCandles] = useState(()=>makeCandles(countFor('peach')));
   const candlesRef = useRef(candles);
@@ -37,6 +52,11 @@ export default function App(){
   const [showMsgModal,setShowMsgModal] = useState(false);
   const [showVideoModal,setShowVideoModal] = useState(false);
 
+  /* reset candles when birthday year changes */
+  useEffect(() => {
+    relight();
+  }, [birthdayIdx]);  // eslint-disable-line
+
   /* ---------- effects ---------- */
   useEffect(() => { listRemotePhotos().then(setBootRemote).catch(()=>{}); }, []);
 
@@ -45,12 +65,9 @@ export default function App(){
     return () => { confettiRef.current?.stop?.(); };
   }, []);
 
-  /* Stop confetti + audio when tab is hidden (saves CPU/GPU) */
   useEffect(() => {
     const onVis = () => {
-      if (document.hidden) {
-        confettiRef.current?.stop?.();
-      }
+      if (document.hidden) confettiRef.current?.stop?.();
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
@@ -124,7 +141,7 @@ export default function App(){
 
   /* ---------- global input ---------- */
   const fnRef = useRef({});
-  fnRef.current = { startBlow, stopBlow, phase };
+  fnRef.current = { startBlow, stopBlow, phase, view };
   useEffect(()=>{
     const BLOW_DELAY = 180;
     const DRAG_KILL = 14;
@@ -132,9 +149,10 @@ export default function App(){
     const clearIntent = ()=>{ if(intent){ clearTimeout(intent); intent = 0; } };
 
     const down = (e)=>{
-      if(e.target.closest('button, a, .style-picker, .pill')) return;
+      if(e.target.closest('button, a, .style-picker, .pill, .birthday-list')) return;
       sx = e.clientX; sy = e.clientY;
-      const { phase } = fnRef.current;
+      const { phase, view } = fnRef.current;
+      if (view === 'gallery') return;
       if(phase==='intro'){
         e.preventDefault();
         clearIntent();
@@ -185,15 +203,15 @@ export default function App(){
     AK.init(); AK.setMuted(m);
   };
 
-  const relight = (styleOverride)=>{
+  const relight = useCallback((styleOverride)=>{
     const style = styleOverride ?? cakeStyle;
     progRef.current = 0;
     holdRef.current = false; setHolding(false);
     cancelAnimationFrame(rafRef.current);
-    const fresh = makeCandles(countFor(style));
+    const fresh = makeCandles(style === 'peach' ? PEACH_COUNT : STRAWBERRY_COUNT);
     candlesRef.current = fresh; setCandles(fresh);
     setPhase('intro');
-  };
+  }, [cakeStyle, PEACH_COUNT, STRAWBERRY_COUNT]);
 
   const chooseCake = (s)=>{
     if(s === cakeStyle) return;
@@ -220,13 +238,56 @@ export default function App(){
     return <Gallery onBack={()=>setView('cake')} initialRemote={bootRemote}/>;
 
   return (
-    <div className={'app ' + phase}>
+    <div className={'app ' + phase + ' theme-' + birthday.age}>
       <div className="floor" style={{ opacity:(lit/total)*.9 }}/>
-      <Lights on={phase === 'party'}/>
-      <Cake candles={candles} blowing={holding} small={phase === 'party'} style={cakeStyle}/>
+      <Lights key={'lights-'+birthdayIdx} on={phase === 'party'}/>
+<Cake key={'cake-'+birthdayIdx+'-'+cakeStyle}
+  candles={candles} blowing={holding} small={phase === 'party'} style={cakeStyle}/>
       <canvas id="fx" ref={fxRef}/>
 
+      {/* ═══ CORNER BUTTONS ═══ */}
       <div className="corner tr">
+        {/* ✅ BIRTHDAY SELECTOR — left of video icon */}
+        <div className="birthday-dropdown">
+          <button
+            className={'icon-btn' + (showBirthdayList ? ' active' : '')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowBirthdayList(v => !v);
+            }}
+            aria-label="choose birthday year" title="choose birthday year">
+            <BirthdayIcon/>
+          </button>
+          {showBirthdayList && (
+            <div className="birthday-list" onClick={e => e.stopPropagation()}>
+              <div className="birthday-list-header">
+                <span>Birthday Year</span>
+                <button className="birthday-list-close"
+                  onClick={() => setShowBirthdayList(false)}
+                  aria-label="close">
+                  <CloseIcon size={12}/>
+                </button>
+              </div>
+              {BIRTHDAYS.map((b, i) => (
+                <button
+                  key={b.age}
+                  className={'birthday-list-item' + (i === birthdayIdx ? ' selected' : '')}
+                  onClick={() => {
+                    setBirthdayIdx(i);
+                    setCakeStyle('peach');
+                    setPopped([]);
+                    setShowBirthdayList(false);
+                  }}
+                >
+                  <span className="birthday-list-label">{ordinal(b.age)}</span>
+                  <span className="birthday-list-year">{b.year}</span>
+                  {i === birthdayIdx && <span className="birthday-list-check">✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <button className="icon-btn" onClick={()=>setShowVideoModal(true)}
           aria-label="play video" title="play video">
           <VideoIcon/>
@@ -255,7 +316,8 @@ export default function App(){
 
       {phase === 'intro' && (
         <div className="hint">
-          <p className="wish">Make a wish, <em>Yoyo</em>
+          <p className="wish">
+            Happy <em>{ageLabel}</em> Birthday, <em>Yoyo</em>
             <img src={rabbitImg} alt="Yoyo" className="yoyo-pic"/>
           </p>
           <div className={'pill' + (holding ? ' hold' : '')}
@@ -276,7 +338,9 @@ export default function App(){
           <Badge/>
           <main className="party">
             <div className="eyebrow">
-              <span className="rule"/><StarIcon/> Happy Birthday <StarIcon/><span className="rule"/>
+              <span className="rule"/><StarIcon/>
+              {ageLabel} Birthday
+              <StarIcon/><span className="rule"/>
             </div>
             <h1 className="big" aria-label="Yoyo!">
               {'Yoyo!'.split('').map((ch,i)=>(
@@ -290,7 +354,36 @@ export default function App(){
           </main>
         </React.Fragment>
       )}
-
+      {/* ═══ BIRTHDAY YEAR PICKER — centered modal ═══ */}
+{showBirthdayList && (
+  <div className="birthday-overlay" onClick={() => setShowBirthdayList(false)}>
+    <div className="birthday-modal" onClick={e => e.stopPropagation()}>
+      <h3 className="birthday-modal-title">Choose Birthday Year</h3>
+      <div className="birthday-modal-list">
+        {BIRTHDAYS.map((b, i) => (
+          <button
+            key={b.age}
+            className={'birthday-modal-item' + (i === birthdayIdx ? ' selected' : '')}
+            onClick={() => {
+              setBirthdayIdx(i);
+              setCakeStyle('peach');
+              setPopped([]);
+              setShowBirthdayList(false);
+            }}
+          >
+            <span className="birthday-modal-label">{ordinal(b.age)}</span>
+            <span className="birthday-modal-year">{b.year}</span>
+            {i === birthdayIdx && <span className="birthday-modal-check">✓</span>}
+          </button>
+        ))}
+      </div>
+      <button className="birthday-modal-close"
+        onClick={() => setShowBirthdayList(false)}>
+        Close
+      </button>
+    </div>
+  </div>
+)}
       <VideoModal open={showVideoModal} onClose={()=>setShowVideoModal(false)}/>
       <MessageModal open={showMsgModal} onClose={()=>setShowMsgModal(false)}/>
       <div className="vignette"/>

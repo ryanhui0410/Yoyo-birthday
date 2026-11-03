@@ -1,5 +1,5 @@
 import React from 'react';
-import Cake3D from '../Cake3D.jsx';
+import Cake3D from '../../Cake3D.jsx';
 import PeachCake3D from './PeachCake3D.jsx';
 import StrawberryCake3D from './StrawberryCake3D.jsx';   // ← new
 export const CAKES = [

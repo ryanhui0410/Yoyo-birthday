@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import videoUrl from '../assets/Video_1031_Ryan_Yoyo.mp4';
+import videoUrl from '../assets/23th_birthday/Video_1031_Ryan_Yoyo.mp4';
 const FONT = '"Fraunces","Noto Serif TC","Noto Serif SC","PingFang SC","Microsoft YaHei",serif';
 
 export default function VideoModal({ open, onClose }) {
