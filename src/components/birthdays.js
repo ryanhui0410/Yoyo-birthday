@@ -15,7 +15,7 @@ import * as B23 from './23th_birthday/index.js';
 // import * as B25 from './25th_birthday/index.js';   // ← uncomment when ready
 
 export const BIRTHDAYS = [
-  { age: 23, year: 2026, label: '23rd Birthday', ...B23 },
+  { age: 23, year: 2025, label: '23rd Birthday', ...B23 },
   // { age: 24, year: 2026, label: '24th Birthday', ...B24 },
   // { age: 25, year: 2027, label: '25th Birthday', ...B25 },
 ];
