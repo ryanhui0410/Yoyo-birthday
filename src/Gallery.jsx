@@ -666,74 +666,8 @@ export default function Gallery({ onBack, initialRemote, inFolderRef }) {
     applyZoom();
   };
 
-  /* ---------- grid zoom (pinch/pan on photo grid) ---------- */
-  const gridZoomEl = useRef(null);
-  const gz = useRef({ s: 1, x: 0, y: 0 });
-  const gpts = useRef(new Map());
-  const ggest = useRef(null);
 
-  const applyGridZoom = () => {
-    const el = gridZoomEl.current; if (!el) return;
-    const v = gz.current;
-    el.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.s})`;
-    el.style.cursor = v.s > 1 ? 'grab' : 'default';
-  };
-
-  const clampGZ = s => Math.min(4, Math.max(1, s));
-
-  const gridZoomDown = (e) => {
-    gpts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    const list = [...gpts.current.values()];
-    if (list.length === 1) {
-      if (gz.current.s === 1) return;
-      e.stopPropagation();
-      ggest.current = { mode:'pan', zoom:{...gz.current}, x:e.clientX, y:e.clientY };
-    } else if (list.length === 2) {
-      e.stopPropagation();
-      const [a,b] = list;
-      ggest.current = { mode:'pinch', zoom:{...gz.current},
-        dist:Math.hypot(a.x-b.x, a.y-b.y)||1,
-        mid:{x:(a.x+b.x)/2, y:(a.y+b.y)/2} };
-    }
-  };
-  const gridZoomMove = (e) => {
-    if (!gpts.current.has(e.pointerId)) return;
-    gpts.current.set(e.pointerId, { x:e.clientX, y:e.clientY });
-    const g = ggest.current;
-    if (!g) return;
-    e.stopPropagation();
-    const list = [...gpts.current.values()];
-    if (g.mode === 'pinch' && list.length >= 2) {
-      const [a,b] = list;
-      const d = Math.hypot(a.x-b.x, a.y-b.y)||1;
-      const mid = { x:(a.x+b.x)/2, y:(a.y+b.y)/2 };
-      const s = clampGZ(g.zoom.s * d / g.dist);
-      gz.current = { s, x:g.zoom.x+(mid.x-g.mid.x), y:g.zoom.y+(mid.y-g.mid.y) };
-      applyGridZoom();
-    } else if (g.mode === 'pan' && list.length === 1 && g.zoom.s > 1) {
-      gz.current = { s:g.zoom.s, x:g.zoom.x+(e.clientX-g.x), y:g.zoom.y+(e.clientY-g.y) };
-      applyGridZoom();
-    }
-  };
-  const gridZoomUp = (e) => {
-    if (!gpts.current.has(e.pointerId)) return;
-    e.stopPropagation();
-    gpts.current.delete(e.pointerId);
-    if (gpts.current.size === 0) ggest.current = null;
-    else if (gpts.current.size === 1) {
-      const [a] = [...gpts.current.values()];
-      ggest.current = { mode:'pan', zoom:{...gz.current}, x:a.x, y:a.y };
-    }
-  };
-  const gridZoomWheel = (e) => {
-    if (gz.current.s === 1 && e.deltaY > 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    gz.current = { ...gz.current, s: clampGZ(gz.current.s * (e.deltaY<0 ? 1.12 : .89)) };
-    if (gz.current.s === 1) gz.current = { s:1, x:0, y:0 };
-    applyGridZoom();
-  };
-
+ 
   /* ---------- download ---------- */
   const downloadPhoto = async () => {
     const p = displayPhotos[open];
@@ -926,37 +860,27 @@ export default function Gallery({ onBack, initialRemote, inFolderRef }) {
           )}
 
           {unfiledPhotos.length > 0 && (
-            <div className="g-grid-zoom-wrap"
-              onPointerDown={gridZoomDown} onPointerMove={gridZoomMove}
-              onPointerUp={gridZoomUp} onPointerCancel={gridZoomUp}
-              onWheel={gridZoomWheel}>
-              <div ref={gridZoomEl} className="g-grid-zoom">
-                <div className="g-folder-view-grid">
-                  {unfiledPhotos.map((p, i) => {
-                    const key = getPhotoKey(p);
-                    return (
-                      <figure key={key}
-                        className={'g-folder-photo' + (p.kind==='f'?' is-new':'')}
-                        style={{ '--dly': (i%7)*40+'ms' }}
-                        draggable="true"
-                        onDragStart={(e) => onPhotoDragStart(e, key)}
-                        onClick={() => {
-                          if (gz.current.s > 1) { gz.current = {s:1,x:0,y:0}; applyGridZoom(); return; }
-                          setOpen(i);
-                        }}>
-                        {renderImg(p, false)}
-                        <button className="g-move-btn"
-                          onClick={(e) => { e.stopPropagation(); setMovingKeys([key]); }}
-                          aria-label="move to folder" title="move to folder">
-                          <MoveIcon size={14}/>
-                        </button>
-                      </figure>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
+  <div className="g-folder-view-grid">
+    {unfiledPhotos.map((p, i) => {
+      const key = getPhotoKey(p);
+      return (
+        <figure key={key}
+          className={'g-folder-photo' + (p.kind==='f'?' is-new':'')}
+          style={{ '--dly': (i%7)*40+'ms' }}
+          draggable="true"
+          onDragStart={(e) => onPhotoDragStart(e, key)}
+          onClick={() => setOpen(i)}>
+          {renderImg(p, false)}
+          <button className="g-move-btn"
+            onClick={(e) => { e.stopPropagation(); setMovingKeys([key]); }}
+            aria-label="move to folder" title="move to folder">
+            <MoveIcon size={14}/>
+          </button>
+        </figure>
+      );
+    })}
+  </div>
+)}
         </React.Fragment>
       )}
 
@@ -978,36 +902,26 @@ export default function Gallery({ onBack, initialRemote, inFolderRef }) {
               </p>
             </div>
           ) : (
-            <div className="g-grid-zoom-wrap"
-              onPointerDown={gridZoomDown} onPointerMove={gridZoomMove}
-              onPointerUp={gridZoomUp} onPointerCancel={gridZoomUp}
-              onWheel={gridZoomWheel}>
-              <div ref={gridZoomEl} className="g-grid-zoom">
-                <div className="g-folder-view-grid">
-                  {folderPhotos.map((p, i) => {
-                    const key = getPhotoKey(p);
-                    return (
-                      <figure key={key}
-                        className="g-folder-photo"
-                        onClick={() => {
-                          if (gz.current.s > 1) { gz.current = {s:1,x:0,y:0}; applyGridZoom(); return; }
-                          setOpen(i);
-                        }}>
-                        {renderImg(p, false)}
-                        <button className="g-remove-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removePhotosFromFolder([key]);
-                          }}
-                          aria-label="remove from folder" title="remove from folder">
-                          <CloseIcon size={12}/>
-                        </button>
-                      </figure>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+            <div className="g-folder-view-grid">
+  {folderPhotos.map((p, i) => {
+    const key = getPhotoKey(p);
+    return (
+      <figure key={key}
+        className="g-folder-photo"
+        onClick={() => setOpen(i)}>
+        {renderImg(p, false)}
+        <button className="g-remove-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            removePhotosFromFolder([key]);
+          }}
+          aria-label="remove from folder" title="remove from folder">
+          <CloseIcon size={12}/>
+        </button>
+      </figure>
+    );
+  })}
+</div>
           )}
         </React.Fragment>
       )}
