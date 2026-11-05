@@ -130,7 +130,35 @@ export default function App(){
       return ()=>{ [t1,t2,t3,t4].forEach(clearTimeout); clearInterval(sky); };
     }
   },[phase]);
-
+  /* ---------- back gesture / hardware button ---------- */
+useEffect(() => {
+  let handle;
+  if (window.Capacitor?.isNativePlatform?.()) {
+    handle = CapApp.addListener('backButton', () => {
+      if (showBirthdayList) {
+        setShowBirthdayList(false);
+        return;
+      }
+      if (showVideoModal) {
+        setShowVideoModal(false);
+        return;
+      }
+      if (showMsgModal) {
+        setShowMsgModal(false);
+        return;
+      }
+      if (inFolderRef.current) {
+        inFolderRef.current = false;
+        window.dispatchEvent(new CustomEvent('gallery-back'));
+      } else if (fnRef.current.view === 'gallery') {
+        setView('cake');
+      } else {
+        CapApp.exitApp();
+      }
+    });
+  }
+  return () => { handle?.then?.(h => h.remove()); };
+}, [view, showVideoModal, showMsgModal, showBirthdayList]);
   /* ---------- blow interaction ---------- */
   const startBlow = useCallback(()=>{
     if(phase!=='intro' || holdRef.current) return;
