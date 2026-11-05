@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import {
-  listRemotePhotos, fetchPhotoBlob, fetchPhotoOriginal, uploadPhoto
-} from './photosService.js';
 import { registerPlugin } from '@capacitor/core';
-
+import {
+  listRemotePhotos, fetchPhotoBlob, fetchPhotoOriginal, uploadPhoto,
+  loadRemoteFolders, saveRemoteFolders, mergeFolders
+} from './photosService.js';
 const SavePhoto = registerPlugin('SavePhoto');
 const TILTS = [-3.2, 2.4, -1.6, 3.4, -2.6, 1.2];
 const ZMAX = 6;
@@ -11,12 +11,12 @@ const FOLDERS_KEY = 'yoyo-gallery-folders';
 const DOWNLOADS_KEY = 'yoyo-downloaded-photos';
 
 /* ═══════════════ IMAGE COMPRESSION ═══════════════ */
-/* Resizes + compresses before upload → much faster */
 function compressImage(file, maxDim = 1920, quality = 0.82) {
   return new Promise((resolve) => {
-    /* skip non-images */
+    if (/\.hei[cf]$/i.test(file.name) || /image\/hei[cf]/i.test(file.type)) {
+      resolve(file); return;
+    }
     if (!file.type.startsWith('image/')) { resolve(file); return; }
-    /* skip small files */
     if (file.size < 200 * 1024) { resolve(file); return; }
 
     const img = new Image();
@@ -24,7 +24,6 @@ function compressImage(file, maxDim = 1920, quality = 0.82) {
     img.onload = () => {
       URL.revokeObjectURL(url);
       let { width: w, height: h } = img;
-      /* scale down if larger than maxDim */
       if (w > maxDim || h > maxDim) {
         const ratio = Math.min(maxDim / w, maxDim / h);
         w = Math.round(w * ratio);
@@ -35,7 +34,6 @@ function compressImage(file, maxDim = 1920, quality = 0.82) {
       cv.getContext('2d').drawImage(img, 0, 0, w, h);
       cv.toBlob((blob) => {
         if (blob && blob.size < file.size) {
-          /* create a new File so uploadPhoto still works */
           resolve(new File([blob], file.name, {
             type: 'image/jpeg', lastModified: Date.now()
           }));
@@ -279,13 +277,13 @@ const getPhotoKey = (p) => p.name;
 /* ═══════════════════════════════════════════
    GALLERY
    ═══════════════════════════════════════════ */
-export default function Gallery({ onBack, initialRemote }) {
+export default function Gallery({ onBack, initialRemote, inFolderRef }) {
 
   const [open, setOpen] = useState(null);
   const [remote, setRemote] = useState(initialRemote || []);
   const [fresh, setFresh] = useState([]);
   const [upload, setUpload] = useState(null);
-  const [uploadPhase, setUploadPhase] = useState('');  // 'compressing' | 'uploading'
+  const [uploadPhase, setUploadPhase] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [syncErr, setSyncErr] = useState('');
   const [downloading, setDownloading] = useState(false);
@@ -321,8 +319,54 @@ export default function Gallery({ onBack, initialRemote }) {
   const [movingKeys, setMovingKeys] = useState(null);
   const [dragOverFolder, setDragOverFolder] = useState(null);
 
-  useEffect(() => { saveFolders(folders); }, [folders]);
+  const liveFolders = useMemo(() => folders.filter(f => !f.deleted), [folders]);
 
+  /* ---------- back gesture support ---------- */
+  useEffect(() => {
+    if (inFolderRef) inFolderRef.current = !!activeFolder;
+  }, [activeFolder, inFolderRef]);
+
+  useEffect(() => {
+    const handler = () => {
+      if (activeFolder) {
+        setActiveFolder(null);
+        setOpen(null);
+      }
+    };
+    window.addEventListener('gallery-back', handler);
+    return () => window.removeEventListener('gallery-back', handler);
+  }, [activeFolder]);
+
+  /* ---------- folder sync ---------- */
+  const foldersLoaded = useRef(false);
+  const saveTimerRef = useRef(null);
+  const latestFoldersRef = useRef(folders);
+
+  useEffect(() => {
+    loadRemoteFolders().then(remoteFolders => {
+      setFolders(prev => mergeFolders(remoteFolders, prev));
+      foldersLoaded.current = true;
+    }).catch(() => {
+      foldersLoaded.current = true;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!foldersLoaded.current) return;
+    saveFolders(folders);
+    latestFoldersRef.current = folders;
+
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveRemoteFolders(latestFoldersRef.current).catch(err => {
+        console.warn('Failed to save folders to GitHub:', err);
+      });
+    }, 300);
+
+    return () => clearTimeout(saveTimerRef.current);
+  }, [folders]);
+
+  /* ---------- lightbox zoom ---------- */
   const zoomEl = useRef(null);
   const z = useRef({ s: 1, x: 0, y: 0 });
   const pts = useRef(new Map());
@@ -374,6 +418,7 @@ export default function Gallery({ onBack, initialRemote }) {
     applyZoom();
   }, [open]);
 
+  /* ---------- derived data ---------- */
   const tsOf = n => +((n.match(/^yoyo-(\d+)/) || [0, 0])[1]);
   const remoteSorted = useMemo(() =>
     [...remote].sort((a, b) => tsOf(b.name) - tsOf(a.name)), [remote]);
@@ -401,17 +446,17 @@ export default function Gallery({ onBack, initialRemote }) {
   const folderPhotoCounts = useMemo(() => {
     const nameSet = new Set(allPhotos.map(p => getPhotoKey(p)));
     const map = {};
-    folders.forEach(f => {
+    liveFolders.forEach(f => {
       map[f.id] = f.photoKeys.filter(k => nameSet.has(k)).length;
     });
     return map;
-  }, [allPhotos, folders]);
+  }, [allPhotos, liveFolders]);
 
-  const allFiledKeys = useMemo(() => new Set(folders.flatMap(f => f.photoKeys)), [folders]);
+  const allFiledKeys = useMemo(() => new Set(liveFolders.flatMap(f => f.photoKeys)), [liveFolders]);
   const unfiledPhotos = useMemo(() =>
     allPhotos.filter(p => !allFiledKeys.has(getPhotoKey(p))), [allPhotos, allFiledKeys]);
   const activeFolderObj = useMemo(() =>
-    folders.find(f => f.id === activeFolder), [folders, activeFolder]);
+    liveFolders.find(f => f.id === activeFolder), [liveFolders, activeFolder]);
   const folderPhotos = useMemo(() => {
     if (!activeFolderObj) return [];
     const keys = new Set(activeFolderObj.photoKeys);
@@ -419,22 +464,33 @@ export default function Gallery({ onBack, initialRemote }) {
   }, [allPhotos, activeFolderObj]);
   const displayPhotos = activeFolder ? folderPhotos : unfiledPhotos;
 
+  /* ---------- folder actions ---------- */
   const createFolder = useCallback(() => {
     const name = newFolderName.trim();
     if (!name) return;
+    const existing = liveFolders.find(f => f.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      setActiveFolder(existing.id);
+      setNewFolderName(''); setShowNewFolder(false);
+      showToast(`Folder "${existing.name}" already exists`);
+      return;
+    }
     const id = 'f_' + Date.now();
     setFolders(f => [...f, { id, name, photoKeys: [], created: Date.now() }]);
     setNewFolderName(''); setShowNewFolder(false);
     showToast(`Folder "${name}" created`);
-  }, [newFolderName, showToast]);
+  }, [newFolderName, liveFolders, showToast]);
 
   const deleteFolder = useCallback((id) => {
-    const folder = folders.find(f => f.id === id);
+    const folder = liveFolders.find(f => f.id === id);
+    if (!folder) return;
     if (!window.confirm('Delete this folder? Photos will return to All Photos.')) return;
-    setFolders(f => f.filter(folder => folder.id !== id));
+    setFolders(f => f.map(fol =>
+      fol.id === id ? { ...fol, deleted: true, deletedAt: Date.now() } : fol
+    ));
     if (activeFolder === id) setActiveFolder(null);
-    showToast(`Folder "${folder?.name}" deleted`);
-  }, [activeFolder, folders, showToast]);
+    showToast(`Folder "${folder.name}" deleted`);
+  }, [activeFolder, liveFolders, showToast]);
 
   const startRename = useCallback((folder) => {
     setRenamingId(folder.id);
@@ -452,7 +508,7 @@ export default function Gallery({ onBack, initialRemote }) {
   }, [renamingId, renameVal, showToast]);
 
   const movePhotosToFolder = useCallback((photoKeys, folderId) => {
-    const folder = folders.find(f => f.id === folderId);
+    const folder = liveFolders.find(f => f.id === folderId);
     const keySet = new Set(photoKeys);
     setFolders(f => f.map(fol => ({
       ...fol,
@@ -468,7 +524,7 @@ export default function Gallery({ onBack, initialRemote }) {
         ? `${count} photos moved to "${folder?.name}" ✓`
         : `Photo moved to "${folder?.name}" ✓`
     );
-  }, [folders, showToast]);
+  }, [liveFolders, showToast]);
 
   const removePhotosFromFolder = useCallback((photoKeys) => {
     const keySet = new Set(photoKeys);
@@ -481,6 +537,7 @@ export default function Gallery({ onBack, initialRemote }) {
       : 'Photo removed from folder');
   }, [showToast]);
 
+  /* ---------- drag & drop ---------- */
   const onPhotoDragStart = useCallback((e, photoKey) => {
     e.dataTransfer.setData('text/plain', photoKey);
     e.dataTransfer.effectAllowed = 'move';
@@ -498,6 +555,7 @@ export default function Gallery({ onBack, initialRemote }) {
     setDragOverFolder(null);
   }, [movePhotosToFolder]);
 
+  /* ---------- lightbox ---------- */
   const close = useCallback(() => setOpen(null), []);
   const step = useCallback((d) => {
     setOpen(o => (o === null ? o : (o + d + displayPhotos.length) % displayPhotos.length));
@@ -514,7 +572,7 @@ export default function Gallery({ onBack, initialRemote }) {
     return () => window.removeEventListener('keydown', kd);
   }, [open, close, step]);
 
-  /* ✅ FAST UPLOAD: compress first, then upload */
+  /* ---------- upload ---------- */
   const onPick = async (e) => {
     const files = [...e.target.files];
     e.target.value = '';
@@ -525,10 +583,7 @@ export default function Gallery({ onBack, initialRemote }) {
       setUpload({ done: i, total: files.length });
       setUploadPhase('compressing');
       try {
-        /* step 1: compress (fast, local) */
         const compressed = await compressImage(files[i]);
-
-        /* step 2: upload (slower, network) */
         setUploadPhase('uploading');
         const { name, blob } = await uploadPhoto(compressed);
         const url = URL.createObjectURL(blob);
@@ -553,6 +608,7 @@ export default function Gallery({ onBack, initialRemote }) {
     showToast('Photos uploaded ✓');
   };
 
+  /* ---------- lightbox zoom ---------- */
   const clampS = s => Math.min(ZMAX, Math.max(1, s));
   const zoomDown = (e) => {
     e.stopPropagation();
@@ -610,13 +666,80 @@ export default function Gallery({ onBack, initialRemote }) {
     applyZoom();
   };
 
-  /* ✅ DUPLICATE DOWNLOAD CHECK */
+  /* ---------- grid zoom (pinch/pan on photo grid) ---------- */
+  const gridZoomEl = useRef(null);
+  const gz = useRef({ s: 1, x: 0, y: 0 });
+  const gpts = useRef(new Map());
+  const ggest = useRef(null);
+
+  const applyGridZoom = () => {
+    const el = gridZoomEl.current; if (!el) return;
+    const v = gz.current;
+    el.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.s})`;
+    el.style.cursor = v.s > 1 ? 'grab' : 'default';
+  };
+
+  const clampGZ = s => Math.min(4, Math.max(1, s));
+
+  const gridZoomDown = (e) => {
+    gpts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const list = [...gpts.current.values()];
+    if (list.length === 1) {
+      if (gz.current.s === 1) return;
+      e.stopPropagation();
+      ggest.current = { mode:'pan', zoom:{...gz.current}, x:e.clientX, y:e.clientY };
+    } else if (list.length === 2) {
+      e.stopPropagation();
+      const [a,b] = list;
+      ggest.current = { mode:'pinch', zoom:{...gz.current},
+        dist:Math.hypot(a.x-b.x, a.y-b.y)||1,
+        mid:{x:(a.x+b.x)/2, y:(a.y+b.y)/2} };
+    }
+  };
+  const gridZoomMove = (e) => {
+    if (!gpts.current.has(e.pointerId)) return;
+    gpts.current.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    const g = ggest.current;
+    if (!g) return;
+    e.stopPropagation();
+    const list = [...gpts.current.values()];
+    if (g.mode === 'pinch' && list.length >= 2) {
+      const [a,b] = list;
+      const d = Math.hypot(a.x-b.x, a.y-b.y)||1;
+      const mid = { x:(a.x+b.x)/2, y:(a.y+b.y)/2 };
+      const s = clampGZ(g.zoom.s * d / g.dist);
+      gz.current = { s, x:g.zoom.x+(mid.x-g.mid.x), y:g.zoom.y+(mid.y-g.mid.y) };
+      applyGridZoom();
+    } else if (g.mode === 'pan' && list.length === 1 && g.zoom.s > 1) {
+      gz.current = { s:g.zoom.s, x:g.zoom.x+(e.clientX-g.x), y:g.zoom.y+(e.clientY-g.y) };
+      applyGridZoom();
+    }
+  };
+  const gridZoomUp = (e) => {
+    if (!gpts.current.has(e.pointerId)) return;
+    e.stopPropagation();
+    gpts.current.delete(e.pointerId);
+    if (gpts.current.size === 0) ggest.current = null;
+    else if (gpts.current.size === 1) {
+      const [a] = [...gpts.current.values()];
+      ggest.current = { mode:'pan', zoom:{...gz.current}, x:a.x, y:a.y };
+    }
+  };
+  const gridZoomWheel = (e) => {
+    if (gz.current.s === 1 && e.deltaY > 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    gz.current = { ...gz.current, s: clampGZ(gz.current.s * (e.deltaY<0 ? 1.12 : .89)) };
+    if (gz.current.s === 1) gz.current = { s:1, x:0, y:0 };
+    applyGridZoom();
+  };
+
+  /* ---------- download ---------- */
   const downloadPhoto = async () => {
     const p = displayPhotos[open];
     if (!p || downloading) return;
     const fname = p.name || 'yoyo-photo.jpg';
 
-    /* check if already downloaded */
     if (isDownloaded(fname)) {
       const again = window.confirm(
         `"${fname}" has already been downloaded to this phone.\n\nDo you want to download it again?`
@@ -722,7 +845,6 @@ export default function Gallery({ onBack, initialRemote }) {
           </button>
         </div>
 
-        {/* ✅ Upload progress with phase indicator */}
         {upload && (
           <div className="g-upload-progress">
             <div className="g-upload-bar">
@@ -765,9 +887,9 @@ export default function Gallery({ onBack, initialRemote }) {
             </div>
           )}
 
-          {folders.length > 0 && (
+          {liveFolders.length > 0 && (
             <div className="g-folder-grid">
-              {folders.map(folder => (
+              {liveFolders.map(folder => (
                 <div key={folder.id}
                   className={'g-folder-card' + (dragOverFolder===folder.id?' drag-over':'')}
                   onClick={() => {
@@ -778,26 +900,11 @@ export default function Gallery({ onBack, initialRemote }) {
                   onDragLeave={() => setDragOverFolder(null)}
                   onDrop={(e) => onFolderDrop(e, folder.id)}>
                   <div className="g-folder-icon"><FolderIcon size={32}/></div>
-                  {renamingId===folder.id ? (
-                    <div className="g-folder-rename-inline" onClick={e=>e.stopPropagation()}>
-                      <input autoFocus className="g-folder-input-sm" value={renameVal}
-                        onChange={e=>setRenameVal(e.target.value)}
-                        onKeyDown={e=>{
-                          if(e.key==='Enter') confirmRename(e.target.value);
-                          if(e.key==='Escape'){ setRenamingId(null); setRenameVal(''); }
-                        }}
-                        onBlur={e=>confirmRename(e.target.value)}/>
-                    </div>
-                  ) : (
-                    <p className="g-folder-name">{folder.name}</p>
-                  )}
+                  <p className="g-folder-name">{folder.name}</p>
                   <p className="g-folder-count">
                     {folderPhotoCounts[folder.id]} {folderPhotoCounts[folder.id]===1?'photo':'photos'}
                   </p>
                   <div className="g-folder-actions" onClick={e=>e.stopPropagation()}>
-                    <button className="g-folder-act"
-                      onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); startRename(folder); }}
-                      aria-label="rename folder" title="rename"><EditIcon size={13}/></button>
                     <button className="g-folder-act danger"
                       onClick={() => deleteFolder(folder.id)}
                       aria-label="delete folder" title="delete"><TrashIcon size={13}/></button>
@@ -807,37 +914,47 @@ export default function Gallery({ onBack, initialRemote }) {
             </div>
           )}
 
-          {unfiledPhotos.length === 0 && folders.length === 0 ? (
+          {unfiledPhotos.length === 0 && liveFolders.length === 0 ? (
             <div className="g-empty">
               <p>No photos yet.</p>
               <p className="g-empty-hint">Tap <strong>add photos</strong> to upload from this device.</p>
             </div>
           ) : unfiledPhotos.length > 0 && (
             <div className="g-section-label">
-              {folders.length > 0 ? 'All Photos' : ''}
+              {liveFolders.length > 0 ? 'All Photos' : ''}
             </div>
           )}
 
           {unfiledPhotos.length > 0 && (
-            <div className="g-folder-view-grid">
-              {unfiledPhotos.map((p, i) => {
-                const key = getPhotoKey(p);
-                return (
-                  <figure key={key}
-                    className={'g-folder-photo' + (p.kind==='f'?' is-new':'')}
-                    style={{ '--dly': (i%7)*40+'ms' }}
-                    draggable="true"
-                    onDragStart={(e) => onPhotoDragStart(e, key)}
-                    onClick={() => setOpen(i)}>
-                    {renderImg(p, false)}
-                    <button className="g-move-btn"
-                      onClick={(e) => { e.stopPropagation(); setMovingKeys([key]); }}
-                      aria-label="move to folder" title="move to folder">
-                      <MoveIcon size={14}/>
-                    </button>
-                  </figure>
-                );
-              })}
+            <div className="g-grid-zoom-wrap"
+              onPointerDown={gridZoomDown} onPointerMove={gridZoomMove}
+              onPointerUp={gridZoomUp} onPointerCancel={gridZoomUp}
+              onWheel={gridZoomWheel}>
+              <div ref={gridZoomEl} className="g-grid-zoom">
+                <div className="g-folder-view-grid">
+                  {unfiledPhotos.map((p, i) => {
+                    const key = getPhotoKey(p);
+                    return (
+                      <figure key={key}
+                        className={'g-folder-photo' + (p.kind==='f'?' is-new':'')}
+                        style={{ '--dly': (i%7)*40+'ms' }}
+                        draggable="true"
+                        onDragStart={(e) => onPhotoDragStart(e, key)}
+                        onClick={() => {
+                          if (gz.current.s > 1) { gz.current = {s:1,x:0,y:0}; applyGridZoom(); return; }
+                          setOpen(i);
+                        }}>
+                        {renderImg(p, false)}
+                        <button className="g-move-btn"
+                          onClick={(e) => { e.stopPropagation(); setMovingKeys([key]); }}
+                          aria-label="move to folder" title="move to folder">
+                          <MoveIcon size={14}/>
+                        </button>
+                      </figure>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </React.Fragment>
@@ -846,10 +963,6 @@ export default function Gallery({ onBack, initialRemote }) {
       {activeFolder && (
         <React.Fragment>
           <div className="g-folder-actions-bar">
-            <button className="g-folder-bar-btn"
-              onClick={() => startRename(activeFolderObj)}>
-              <EditIcon size={14}/> rename
-            </button>
             <button className="g-folder-bar-btn danger"
               onClick={() => deleteFolder(activeFolder)}>
               <TrashIcon size={14}/> delete folder
@@ -865,25 +978,35 @@ export default function Gallery({ onBack, initialRemote }) {
               </p>
             </div>
           ) : (
-            <div className="g-folder-view-grid">
-              {folderPhotos.map((p, i) => {
-                const key = getPhotoKey(p);
-                return (
-                  <figure key={key}
-                    className="g-folder-photo"
-                    onClick={() => setOpen(i)}>
-                    {renderImg(p, false)}
-                    <button className="g-remove-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removePhotosFromFolder([key]);
-                      }}
-                      aria-label="remove from folder" title="remove from folder">
-                      <CloseIcon size={12}/>
-                    </button>
-                  </figure>
-                );
-              })}
+            <div className="g-grid-zoom-wrap"
+              onPointerDown={gridZoomDown} onPointerMove={gridZoomMove}
+              onPointerUp={gridZoomUp} onPointerCancel={gridZoomUp}
+              onWheel={gridZoomWheel}>
+              <div ref={gridZoomEl} className="g-grid-zoom">
+                <div className="g-folder-view-grid">
+                  {folderPhotos.map((p, i) => {
+                    const key = getPhotoKey(p);
+                    return (
+                      <figure key={key}
+                        className="g-folder-photo"
+                        onClick={() => {
+                          if (gz.current.s > 1) { gz.current = {s:1,x:0,y:0}; applyGridZoom(); return; }
+                          setOpen(i);
+                        }}>
+                        {renderImg(p, false)}
+                        <button className="g-remove-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removePhotosFromFolder([key]);
+                          }}
+                          aria-label="remove from folder" title="remove from folder">
+                          <CloseIcon size={12}/>
+                        </button>
+                      </figure>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </React.Fragment>
@@ -970,7 +1093,7 @@ export default function Gallery({ onBack, initialRemote }) {
                 : 'Move photo to…'}
             </h3>
             <div className="g-move-list">
-              {folders.map(folder => (
+              {liveFolders.map(folder => (
                 <button key={folder.id} className="g-move-item"
                   onClick={() => {
                     movePhotosToFolder(movingKeys, folder.id);

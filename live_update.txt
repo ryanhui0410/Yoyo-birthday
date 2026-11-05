@@ -1,0 +1,9 @@
+cd D:\Yoyo\yoyo_birthday
+npm run build
+cd dist
+git init
+git checkout -b gh-pages
+git add .
+git commit -m "update"
+git push -f https://github.com/ryanhui0410/Yoyo-birthday.git gh-pages
+cd ..

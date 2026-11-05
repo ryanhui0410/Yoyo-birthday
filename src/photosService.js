@@ -6,8 +6,9 @@ const REPO  = 'Yoyo-birthday';
 const FOLDER = 'src/photos';
 const BRANCH = 'main';
 const API = 'https://api.github.com';
+const FOLDER_CONFIG = 'src/photos/.folders.json';
 
-async function gh(path, opts = {}){
+async function gh(path, opts = {}) {
   const res = await fetch(API + path, {
     ...opts,
     headers: {
@@ -16,130 +17,217 @@ async function gh(path, opts = {}){
       ...(opts.headers || {})
     }
   });
-  if (!res.ok){
+  if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message || ('GitHub ' + res.status));
   }
   return await res.json();
 }
 
-/* live listing of the photos folder in the repo */
-export async function listRemotePhotos(){
-  try{
+/* decode the base64 payload returned by the Contents API */
+function decodeContent(b64) {
+  const raw = atob(b64.replace(/\n/g, ''));
+  const bytes = Uint8Array.from(raw, c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+/* ═══════════════ FOLDER MERGE ═══════════════ */
+/*
+ * Union of remote + local folder lists, by folder id.
+ * - local wins field-by-field (so renames / photo moves on THIS device apply)
+ * - folders deleted on ANY device (tombstone: deleted:true) stay deleted
+ * - the same folder name created on two different devices is combined
+ *   (photo lists merged, oldest creation date kept)
+ * → no matter who saves last, nobody's folder ever gets wiped out.
+ */
+export function mergeFolders(remote = [], local = []) {
+  const byId = new Map();
+
+  for (const f of remote) {
+    if (!f || (!f.id && !f.name)) continue;
+    byId.set(f.id || ('name:' + f.name), { ...f });
+  }
+  for (const f of local) {
+    if (!f || (!f.id && !f.name)) continue;
+    const key = f.id || ('name:' + f.name);
+    byId.set(key, { ...(byId.get(key) || {}), ...f });
+  }
+
+  /* tombstones win: a folder deleted on any device stays deleted */
+  const list = [...byId.values()].filter(f => !f.deleted);
+
+  /* combine same-name folders created independently on different devices */
+  const byName = new Map();
+  const out = [];
+  for (const f of list) {
+    const k = (f.name || '').toLowerCase();
+    const hit = byName.get(k);
+    if (!hit) {
+      byName.set(k, f);
+      out.push(f);
+    } else {
+      hit.photoKeys = [...new Set([...(hit.photoKeys || []), ...(f.photoKeys || [])])];
+      if (f.created && (!hit.created || f.created < hit.created)) hit.created = f.created;
+    }
+  }
+  return out;
+}
+
+/* ═══════════════ FOLDER SYNC ═══════════════ */
+export async function loadRemoteFolders() {
+  try {
+    const data = await gh(`/repos/${OWNER}/${REPO}/contents/${FOLDER_CONFIG}?ref=${BRANCH}&t=${Date.now()}`);
+    if (!data.content) return [];
+    return JSON.parse(decodeContent(data.content));
+  } catch {
+    return [];
+  }
+}
+
+export async function saveRemoteFolders(localFolders) {
+  /* 1. read the freshest remote state RIGHT BEFORE writing
+        (this is what prevents user A from wiping user B's new folder) */
+  let sha = null;
+  let remote = [];
+  let remoteRaw = null;
+  try {
+    const existing = await gh(`/repos/${OWNER}/${REPO}/contents/${FOLDER_CONFIG}?ref=${BRANCH}&t=${Date.now()}`);
+    sha = existing.sha;
+    if (existing.content) {
+      remoteRaw = decodeContent(existing.content);
+      remote = JSON.parse(remoteRaw);
+      if (!Array.isArray(remote)) remote = [];
+    }
+  } catch { /* file doesn't exist yet — first ever save */ }
+
+  /* 2. union with local — nothing anyone created gets lost */
+  const merged = mergeFolders(remote, localFolders);
+  const json = JSON.stringify(merged, null, 2);
+
+  /* 3. skip the commit entirely when nothing actually changed
+        (stops useless commits every time the app opens) */
+  if (remoteRaw !== null && json === remoteRaw) return merged;
+
+  const bytes = new TextEncoder().encode(json);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  const content = btoa(bin);
+
+  await gh(`/repos/${OWNER}/${REPO}/contents/${FOLDER_CONFIG}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: 'update folder config',
+      branch: BRANCH,
+      content,
+      ...(sha ? { sha } : {})
+    })
+  });
+  return merged;
+}
+
+/* ═══════════════ PHOTO LISTING ═══════════════ */
+export async function listRemotePhotos() {
+  try {
     const url = `/repos/${OWNER}/${REPO}/contents/${FOLDER}?ref=${BRANCH}&t=${Date.now()}`;
     const data = await gh(url);
     if (!Array.isArray(data)) return [];
     return data
       .filter(f => f.type === 'file' && /\.(jpe?g|png|webp|gif|avif|bmp|svg|heic|heif)$/i.test(f.name))
-      .map(f => ({ 
-        name: f.name, 
-        path: f.path, 
+      .map(f => ({
+        name: f.name,
+        path: f.path,
         sha: f.sha,
-        download_url: f.download_url // ✨ Grab the direct raw download link!
+        download_url: f.download_url
       }));
-  } catch(e){ 
-    console.error("❌ GitHub Error:", e); 
-    return []; 
+  } catch (e) {
+    console.error("GitHub Error:", e);
+    return [];
   }
 }
 
-/* download one photo's bytes (handles large files perfectly in Android WebViews) */
-export async function fetchPhotoBlob(item){
-  // ✨ DIRECT DOWNLOAD: We use the download_url. 
-  // IMPORTANT: Do NOT send the Authorization header here! 
-  // GitHub already baked a temporary token into the URL for private repos.
-  // Sending the header forces a CORS preflight request, which Android WebViews block.
+/* ═══════════════ PHOTO DOWNLOAD ═══════════════ */
+export async function fetchPhotoBlob(item) {
   const url = item.download_url || `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${item.path}`;
-  
-  const res = await fetch(url); // 🚀 No headers needed!
-  
+  const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to download image');
-  
+
   let blob = await res.blob();
 
-  // If the downloaded image is larger than 1MB, compress it dynamically for smooth UI display
   if (blob.size > 1024 * 1024) {
     try {
       blob = await compressForDisplay(blob);
     } catch (err) {
-      console.warn("⚠️ Compression failed, attempting to display original large image:", err);
+      console.warn("Compression failed, using original:", err);
     }
   }
 
   return blob;
 }
-/* full-resolution fetch for saving/sharing (no display compression) */
-export async function fetchPhotoOriginal(item){
-  const url = item.download_url ||
-    `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${item.path}`;
+
+export async function fetchPhotoOriginal(item) {
+  const url = item.download_url || `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${item.path}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to download image');
   return await res.blob();
 }
-/* Helper: Compress an image blob until it is under 1.5MB */
+
+/* ═══════════════ DISPLAY COMPRESSION ═══════════════ */
 async function compressForDisplay(blob) {
   let img;
   try {
-    // If the browser can't decode the file format (e.g. corrupted or HEIC), this catches it cleanly
     img = await createImageBitmap(blob);
   } catch (e) {
-    console.error("❌ Browser could not decode this image format:", e);
+    console.error("Browser could not decode image:", e);
     throw new Error("Image decoding failed");
   }
 
   let scale = 1;
   let quality = 0.85;
   let currentBlob = blob;
-  
+
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  // Try up to 5 times to get it under 1.5MB (giving it a little breathing room)
   for (let i = 0; i < 5; i++) {
     if (currentBlob.size <= 1.5 * 1024 * 1024) break;
-    
-    scale *= 0.85; // Shrink dimensions by 15%
-    quality = Math.max(0.5, quality * 0.9); // Lower JPEG quality safely
-    
+
+    scale *= 0.85;
+    quality = Math.max(0.5, quality * 0.9);
+
     canvas.width = Math.round(img.width * scale);
     canvas.height = Math.round(img.height * scale);
-    
+
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     currentBlob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality));
   }
-  
+
   return currentBlob;
 }
-/* ✨ upload photo WITHOUT compressing or downscaling! ✨ */
-export async function uploadPhoto(file){
+
+/* ═══════════════ PHOTO UPLOAD ═══════════════ */
+export async function uploadPhoto(file) {
   let blob = file;
-  
-  // 1. Get the original file extension (e.g., 'png', 'jpg', 'jpeg')
   let ext = file.name.split('.').pop().toLowerCase();
 
-  // 2. Only process HEIC files (convert to max quality JPEG so browsers can read them)
-  if (/\.hei[cf]$/i.test(file.name) || /image\/hei[cf]/i.test(file.type)){
+  if (/\.hei[cf]$/i.test(file.name) || /image\/hei[cf]/i.test(file.type)) {
     const { default: heic2any } = await import('heic2any');
-    // quality: 1.0 means maximum quality, no heavy compression
-    blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 1.0 }); 
+    blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 1.0 });
     if (Array.isArray(blob)) blob = blob[0];
-    ext = 'jpg'; // HEIC becomes JPG
+    ext = 'jpg';
   }
-
-  // ✨ NO DOWNSCALING OR COMPRESSION HAPPENS HERE! ✨
-  // The original blob is sent exactly as it is.
 
   const buf = new Uint8Array(await blob.arrayBuffer());
   let bin = '';
   for (let i = 0; i < buf.length; i += 0x8000)
     bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
-  const b64 = btoa(bin);   
+  const b64 = btoa(bin);
 
-  // 3. Use the correct extension so PNGs don't break by being named .jpg
   const name = `yoyo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
-  
+
   await gh(`/repos/${OWNER}/${REPO}/contents/${FOLDER}/${name}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -149,5 +237,5 @@ export async function uploadPhoto(file){
       content: b64
     })
   });
-  return { name, blob };   
+  return { name, blob };
 }

@@ -8,6 +8,7 @@ import { makeCandles } from './candles.js';
 import { MessageIcon, VideoIcon, WindIcon, SoundOnIcon, SoundOffIcon, ReplayIcon, StarIcon, CalendarIcon, CloseIcon } from './icons.jsx';
 import VideoModal from './components/VideoModal.jsx';
 import { BIRTHDAYS } from './components/birthdays.js';
+import { App as CapApp } from '@capacitor/app';
 import './gallery.css';
 
 function ordinal(n) {
@@ -18,7 +19,6 @@ function ordinal(n) {
 
 export default function App(){
 
-  /* ---------- birthday selection ---------- */
   const [birthdayIdx, setBirthdayIdx] = useState(BIRTHDAYS.length - 1);
   const [showBirthdayList, setShowBirthdayList] = useState(false);
   const birthday = BIRTHDAYS[birthdayIdx];
@@ -34,7 +34,6 @@ export default function App(){
 
   const countFor = (style) => (style === 'peach' ? PEACH_COUNT : STRAWBERRY_COUNT);
 
-  /* ---------- state ---------- */
   const [phase,setPhase] = useState('intro');
   const [candles,setCandles] = useState(()=>makeCandles(countFor('peach')));
   const candlesRef = useRef(candles);
@@ -52,31 +51,39 @@ export default function App(){
   const [showMsgModal,setShowMsgModal] = useState(false);
   const [showVideoModal,setShowVideoModal] = useState(false);
 
-  /* reset candles when birthday year changes */
+  /* track whether user is inside a folder in the gallery */
+  const inFolderRef = useRef(false);
+
   useEffect(() => {
     relight();
   }, [birthdayIdx]);  // eslint-disable-line
-  import { CapacitorUpdater } from '@capgo/capacitor-updater';
 
-// Add this useEffect INSIDE your App() component:
-useEffect(() => {
-  const syncUpdate = async () => {
-    if (!window.Capacitor?.isNativePlatform?.()) return;
-    try {
-      await CapacitorUpdater.notifyAppReady();
-      const ver = await CapacitorUpdater.download({
-        url: 'https://ryanhui0410.github.io/Yoyo-birthday/update/',
+  /* ---------- back gesture / hardware button ---------- */
+  useEffect(() => {
+    let handle;
+    if (window.Capacitor?.isNativePlatform?.()) {
+      handle = CapApp.addListener('backButton', () => {
+        if (showVideoModal) {
+          setShowVideoModal(false);
+          return;
+        }
+        if (showMsgModal) {
+          setShowMsgModal(false);
+          return;
+        }
+        if (inFolderRef.current) {
+          inFolderRef.current = false;
+          window.dispatchEvent(new CustomEvent('gallery-back'));
+        } else if (fnRef.current.view === 'gallery') {
+          setView('cake');
+        } else {
+          CapApp.exitApp();
+        }
       });
-      if (ver && ver.bundle) {
-        await CapacitorUpdater.set({ id: ver.bundle.id });
-        // app reloads with new code
-      }
-    } catch (e) {
-      // offline or first install — use bundled version
     }
-  };
-  syncUpdate();
-}, []);
+    return () => { handle?.then?.(h => h.remove()); };
+  }, [view, showVideoModal, showMsgModal]);
+
   /* ---------- effects ---------- */
   useEffect(() => { listRemotePhotos().then(setBootRemote).catch(()=>{}); }, []);
 
@@ -244,7 +251,6 @@ useEffect(() => {
     relight();
   };
 
-  /* ---------- derived ---------- */
   const total = candles.length;
   const lit   = candles.filter(c=>!c.out).length;
   const countClass = 'count' + (lit <= 6 && lit > 0 ? ' low' : '');
@@ -253,21 +259,18 @@ useEffect(() => {
     : lit <= 6       ? `almost there — ${lit} to go`
     :                  `${lit} candles to go`;
 
-  /* ---------- render ---------- */
   if(view === 'gallery')
-    return <Gallery onBack={()=>setView('cake')} initialRemote={bootRemote}/>;
+    return <Gallery onBack={()=>setView('cake')} initialRemote={bootRemote} inFolderRef={inFolderRef}/>;
 
   return (
     <div className={'app ' + phase + ' theme-' + birthday.age}>
       <div className="floor" style={{ opacity:(lit/total)*.9 }}/>
       <Lights key={'lights-'+birthdayIdx} on={phase === 'party'}/>
-<Cake key={'cake-'+birthdayIdx+'-'+cakeStyle}
-  candles={candles} blowing={holding} small={phase === 'party'} style={cakeStyle}/>
+      <Cake key={'cake-'+birthdayIdx+'-'+cakeStyle}
+        candles={candles} blowing={holding} small={phase === 'party'} style={cakeStyle}/>
       <canvas id="fx" ref={fxRef}/>
 
-      {/* ═══ CORNER BUTTONS ═══ */}
       <div className="corner tr">
-        {/* ✅ BIRTHDAY SELECTOR — left of video icon */}
         <div className="birthday-dropdown">
           <button
             className={'icon-btn' + (showBirthdayList ? ' active' : '')}
@@ -374,36 +377,36 @@ useEffect(() => {
           </main>
         </React.Fragment>
       )}
-      {/* ═══ BIRTHDAY YEAR PICKER — centered modal ═══ */}
-{showBirthdayList && (
-  <div className="birthday-overlay" onClick={() => setShowBirthdayList(false)}>
-    <div className="birthday-modal" onClick={e => e.stopPropagation()}>
-      <h3 className="birthday-modal-title">Choose Birthday Year</h3>
-      <div className="birthday-modal-list">
-        {BIRTHDAYS.map((b, i) => (
-          <button
-            key={b.age}
-            className={'birthday-modal-item' + (i === birthdayIdx ? ' selected' : '')}
-            onClick={() => {
-              setBirthdayIdx(i);
-              setCakeStyle('peach');
-              setPopped([]);
-              setShowBirthdayList(false);
-            }}
-          >
-            <span className="birthday-modal-label">{ordinal(b.age)}</span>
-            <span className="birthday-modal-year">{b.year}</span>
-            {i === birthdayIdx && <span className="birthday-modal-check">✓</span>}
-          </button>
-        ))}
-      </div>
-      <button className="birthday-modal-close"
-        onClick={() => setShowBirthdayList(false)}>
-        Close
-      </button>
-    </div>
-  </div>
-)}
+
+      {showBirthdayList && (
+        <div className="birthday-overlay" onClick={() => setShowBirthdayList(false)}>
+          <div className="birthday-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="birthday-modal-title">Choose Birthday Year</h3>
+            <div className="birthday-modal-list">
+              {BIRTHDAYS.map((b, i) => (
+                <button
+                  key={b.age}
+                  className={'birthday-modal-item' + (i === birthdayIdx ? ' selected' : '')}
+                  onClick={() => {
+                    setBirthdayIdx(i);
+                    setCakeStyle('peach');
+                    setPopped([]);
+                    setShowBirthdayList(false);
+                  }}
+                >
+                  <span className="birthday-modal-label">{ordinal(b.age)}</span>
+                  <span className="birthday-modal-year">{b.year}</span>
+                  {i === birthdayIdx && <span className="birthday-modal-check">✓</span>}
+                </button>
+              ))}
+            </div>
+            <button className="birthday-modal-close"
+              onClick={() => setShowBirthdayList(false)}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       <VideoModal open={showVideoModal} onClose={()=>setShowVideoModal(false)}/>
       <MessageModal open={showMsgModal} onClose={()=>setShowMsgModal(false)}/>
       <div className="vignette"/>
